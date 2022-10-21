@@ -1,0 +1,33 @@
+1. Chức năng game:
+- Chức năng client
+        + Tạo và tham gia phòng chơi, tìm phòng chơi(match making)
+        + Tạo custom game theo ý muốn, có thể tạo phòng với password, chủ phòng có thể kick người chơi khác
+        + Có thể trao đổi với người chơi khác bằng chatbox để thảo luận về trò chơi
+- Chức năng server
+        + Cho phép từ 6-12 người chơi
+        + Xử lý kết quả sau mỗi đêm với từng role của các người chơi, đưa ra kết quả sáng hôm sau
+        + Điều kiện thắng: một phe đủ vào điều kiện (theo luật chơi)
+        + Công bố kết quả khi trò chơi kết thúc (role của từng người)
+        + Các người chơi sẽ được chia role ngẫu nhiên
+
+2. Tech :
+    - Only C =)))
+    - socket, client sử dụng lib netbd.h, sys/socket.h, ... (mới tìm hiểu đc 2, sau này mở rộng thêm)
+    - Giao diện đồ họa sử dụng thư viện SDL link học : https://www.youtube.com/playlist?list=PLT6WFYYZE6uLMcPGS3qfpYm7T_gViYMMt
+3. Lore :
+    - Trên mạng có đầy
+4. Gameplay
+        + Game bao gồm 2 phe (dân và sói)
+        + Các role có chức năng đặc biệt có thể tương tác đến người chơi khác theo luật 
+        VD: sói cắn người
+        + Có ngày và đêm, ngày là thời gian mọi người thảo luận để tìm ra sói và treo cổ
+        + Ban đêm, các role chức năng có thể thực hiện chức năng của mình
+        VD: sói có thể vote cắn 1 người
+        + Trò chơi kết thúc khi: hết sói hoặc số người = số sói
+        + Các role có trong game: phe người: dân thường, bảo vệ, tiên tri, thợ săn, phù thủy
+                                                  phe sói: sói, sói nguyền
+5. To Do (Cái này update liên tục để tạo deadline dí chết từng thằng một)
+    - Mạnh : Tìm hiểu và học về thư viện SDL
+    - Trung : Viết lore (Ở phần 3 nhé, chí tiết vào)
+    - NA : Tìm hiểu client- server nhé + thuật toán radom ae bảo hôm trước
+    - Thành : Cổ vũ tinh thần ae chạy deadline
