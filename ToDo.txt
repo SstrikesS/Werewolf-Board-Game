@@ -13,7 +13,7 @@
 2. Tech :
     - Only C =)))
     - socket, client sử dụng lib netbd.h, sys/socket.h, ... (mới tìm hiểu đc 2, sau này mở rộng thêm)
-    - Giao diện đồ họa sử dụng thư viện SDL link học : https://www.youtube.com/playlist?list=PLT6WFYYZE6uLMcPGS3qfpYm7T_gViYMMt
+    - Giao diện đồ họa sử dụng thư viện SDL link học : https://www.youtube.com/watch?v=yFLa3ln16w0
 3. Lore :
     - Trên mạng có đầy
 4. Gameplay
