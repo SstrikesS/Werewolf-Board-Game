@@ -11,13 +11,13 @@ int main(int argc, char** argv) {
         printf("Error\n");
         return 1;
     }
-    window = SDL_CreateWindow("WereWolf Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1200, 600, 0);
+    window = SDL_CreateWindow("WereWolf Game", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1040, 770, 0);
     if(window == NULL){
         printf("Error2\n");
         return 1;
     }
     screen = SDL_GetWindowSurface(window);
-    image = SDL_LoadBMP("image/bg2.bmp");
+    image = SDL_LoadBMP("image/bg1.bmp");
     SDL_BlitSurface(image , NULL, screen, NULL);
     SDL_FreeSurface(image);
     SDL_UpdateWindowSurface(window);
