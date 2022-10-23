@@ -2,6 +2,6 @@
 A simple werewolf board game developed in C
 # Install makefile in Window
 Link tutorial:https://www.youtube.com/watch?v=a3ejgWLqelQ
-Test run : 
+\nTest run : 
   make
   ./test
