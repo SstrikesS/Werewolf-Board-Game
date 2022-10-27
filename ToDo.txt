@@ -12,8 +12,9 @@
 
 2. Tech :
     - Only C =)))
-    - socket, client sử dụng lib netbd.h, sys/socket.h, ... (mới tìm hiểu đc 2, sau này mở rộng thêm)
-    - Giao diện đồ họa sử dụng thư viện SDL link học : https://www.youtube.com/watch?v=yFLa3ln16w0
+    - socket, client dùng C
+        + Sử dụng phương thức UDP để kết nối client - server
+    - Giao diện đồ họa sử dụng thư viện SDL link học : http://www.lazyfoo.net/tutorials/SDL/index.php
 3. Lore :
     - Trên mạng có đầy
 4. Gameplay
@@ -27,7 +28,31 @@
         + Các role có trong game: phe người: dân thường, bảo vệ, tiên tri, thợ săn, phù thủy
                                                   phe sói: sói, sói nguyền
 5. To Do (Cái này update liên tục để tạo deadline dí chết từng thằng một)
-    - Mạnh : Tìm hiểu và học về thư viện SDL
-    - Trung : Viết lore (Ở phần 3 nhé, chí tiết vào)
-    - NA : Tìm hiểu client- server nhé + thuật toán radom ae bảo hôm trước
-    - Thành : Cổ vũ tinh thần ae chạy deadline
+    - Mạnh : Cùng với Na hoàn thành menu game
+    - Trung : Vẽ biểu đồ user case (chụp ảnh gửi lên đây nhé)
+    - NA : Cùng với Mạnh hoàn thành menu game
+    - Thành : Thiết kế client - server đa luồng
+6. Giai đoạn phát triển game:
+    - Thiết kế giao diện:
+        Tuần 2,3. Thiết kế menu game:
+                + Thiết kế background
+                        -> Đã xong
+                + Thiết kế menu (bao gồm "Host game" "Join game" "Quick play" "Exit" và , "Setting" - cái này có thể không có)
+                        -> Chưa hiển thị được text trên background
+                                -> Chỉnh cỡ chứ hiển thị
+                                -> Chỉnh vị trí hiển thị
+                        -> Chưa làm được event khi sử dụng menu (chỉ cần làm nút Exit thôi)
+                                -> Event khi trỏ chuột đến 1 mục thì sẽ hightlight mục đang chọn
+                                -> Event khi bấm vào mục sẽ thực hiện chức năng mục đó
+        Tuần 4,5. Thiết kế client - server
+                + Thiết kế theo phương thức UDP (vì game online nào cũng dùng cái này) 
+                        -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
+                        -> Tham khảo code thầy cho trên teams
+                        -> Sẽ có thể làm thêm thread ( đa luồng) cho server vì game của mình chơi nhiều người
+                + Làm chatbox 
+                        -> Thiết kế 2 chat box: 1 cho tất cả người chơi, 1 cho role đặc biệt (VD: Ma sói sẽ có thể chat riêng với nhau)
+                        -> Kết hợp thiết kế giao diện cho chatbot
+        Tuần 6,7,8,9. Thiết kế game play
+        Tuần 10, 11, 12. Thiết kế giao diện in game
+        Tuần 13. Tối ưu 
+        Tuần 14. Tester, fixbug
