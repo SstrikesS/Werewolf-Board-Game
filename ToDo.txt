@@ -44,6 +44,7 @@
                         -> Chưa làm được event khi sử dụng menu (chỉ cần làm nút Exit thôi)
                                 -> Event khi trỏ chuột đến 1 mục thì sẽ hightlight mục đang chọn
                                 -> Event khi bấm vào mục sẽ thực hiện chức năng mục đó
+                        -> Học : SDL 1->10, 16
         Tuần 4,5. Thiết kế client - server
                 + Thiết kế theo phương thức UDP (vì game online nào cũng dùng cái này) 
                         -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
