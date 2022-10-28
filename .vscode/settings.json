@@ -1,5 +1,9 @@
 {
     "files.associations": {
+<<<<<<< Updated upstream
         "sdl_test_font.h": "c"
+=======
+        "sdl_timer.h": "c"
+>>>>>>> Stashed changes
     }
 }
