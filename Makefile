@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 #OBJS specifies which files to compile as part of the project
 OBJS = test.c
 
@@ -25,14 +24,3 @@ OBJ_NAME = test
 #This is the target that compiles our executable
 all : $(OBJS)
 	$(CC) $(OBJS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
-=======
-CC := gcc
-CFLAGS := `sdl2-config --libs --cflags` -ggdb3 -O0 --std=c99 -Wall -lSDL2_image -lm
-all: test
-test: test.o
-    ${CC} test.o -o test
-test.o: test.c
-    ${CC} ${CFLAGS} test.c
-clean:
-	rm -f *.o *~
->>>>>>> Stashed changes
