@@ -17,7 +17,7 @@ int init(SDL_Window *window){ // Initialize SDL
             printf("Window could not initialize! SDL_Error: %s\n",SDL_GetError());
             success = 0;
         }else{
-            //load_main_menu_background(window);
+            load_main_menu_background(window);
             load_main_menu_option(window);
         }
     }

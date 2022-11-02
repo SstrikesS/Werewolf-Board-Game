@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "sdl_test_font.h": "c"
+        "sdl_test_font.h": "c",
+        "winsock2.h": "c",
+        "ws2tcpip.h": "c"
     }
 }

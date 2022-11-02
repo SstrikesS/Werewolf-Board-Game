@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = test.c
+OBJS = test.c 
 
 #CC specifies which compiler we're using
 CC = gcc
@@ -16,11 +16,13 @@ LIBRARY_PATHS = -L src\lib
 COMPILER_FLAGS = -w -Wl,-subsystem,windows
 
 #LINKER_FLAGS specifies the libraries we're linking against
-LINKER_FLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf
+LINKER_FLAGS = -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lws2_32
 
 #OBJ_NAME specifies the name of our exectuable
 OBJ_NAME = test
 
 #This is the target that compiles our executable
-all : $(OBJS)
+all : $(OBJS) 
 	$(CC) $(OBJS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
+clean:
+	del test.exe
