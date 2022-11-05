@@ -3,5 +3,7 @@
         "sdl_test_font.h": "c",
         "winsock2.h": "c",
         "ws2tcpip.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c"
     }
 }

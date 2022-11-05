@@ -5,10 +5,13 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <stdlib.h>
-typedef struct GameStatus{
+#include <string.h>
+typedef struct GameTexture{
     SDL_Texture *texture;
     SDL_Renderer *renderer;
-}GameStatus;
+    int tWidth;
+    int tHeight;
+}GameTexture;
 SDL_Window *window = NULL;
 const int SCREEN_WIDTH = 1040;
 const int SCREEN_HEIGHT = 770;
@@ -29,9 +32,22 @@ int CreateWindow(){ // Create window
     return SUCCEED;
 }
 
-void load_Texture(char *path, GameStatus *current){ // Load texture
+void load_Texture_Text(char *text, GameTexture *current, TTF_Font *font, SDL_Color textColor){
+
+    SDL_Surface *screen = NULL; 
+    screen = TTF_RenderUTF8_Blended(font, text, textColor);
+    if(screen == NULL){
+        printf("Cant create surface! SDL_Error: %s\n", SDL_GetError());
+    }
+    current->texture = SDL_CreateTextureFromSurface(current->renderer, screen);
+    SDL_QueryTexture(current->texture, NULL, NULL, &current->tWidth, &current->tHeight);
+    SDL_FreeSurface(screen);
+}
+
+void load_Texture_IMG(char *path, GameTexture *current){ // Load texture
     SDL_Surface *screen = NULL;
-    screen = SDL_LoadBMP(path);
+    screen = IMG_Load(path);
+    //screen = SDL_LoadBMP(path); //can use both BMP vs IMG
     if(screen == NULL){
         printf("Cant create surface! SDL_Error: %s\n", SDL_GetError());
         exit(ERROR);
@@ -40,13 +56,16 @@ void load_Texture(char *path, GameStatus *current){ // Load texture
     SDL_FreeSurface(screen);
 }
 
-void Render(GameStatus *current){
-    SDL_SetRenderDrawColor(current->renderer, 255, 0, 0, 255);
+void ResetRender(GameTexture *current){ //reset window to black
+    SDL_SetRenderDrawColor(current->renderer, 0, 0, 0, 255);
     SDL_RenderClear(current->renderer);
-    SDL_SetRenderDrawColor(current->renderer, 255, 255, 255, 255);
-    //SDL_Rect rect = {64, 64, 64, 64};
-    SDL_RenderCopy(current->renderer, current->texture, NULL, NULL);
     SDL_RenderPresent(current->renderer);
+}
+
+void Render(GameTexture *current, int width, int height){ // Render texture and display at position [x,y]
+    SDL_Rect rect = {width, height, current->tWidth, current->tHeight}; 
+    SDL_RenderCopy(current->renderer, current->texture, NULL, &rect);
+    SDL_RenderPresent(current->renderer); //display
 }
 
 void close_win(){ //Close the game
@@ -55,12 +74,12 @@ void close_win(){ //Close the game
     SDL_Quit();
 }
 
-void free_texture(GameStatus *current){
+void free_texture(GameTexture *current){ //free current state
     SDL_DestroyTexture(current->texture);
     SDL_DestroyRenderer(current->renderer);
 }
 
-int Event(GameStatus *current){
+int Event(){ // event of the game
     SDL_Event e;
     int value = 0;
     while(SDL_PollEvent(&e)){
@@ -81,19 +100,33 @@ int Event(GameStatus *current){
     return value;
 }
 int main(int argc, char** argv) {
-    GameStatus *current = (GameStatus *)malloc(sizeof(GameStatus));
+    GameTexture *background = (GameTexture *)malloc(sizeof(GameTexture));
+    GameTexture *textTest = (GameTexture *)malloc(sizeof(GameTexture));
     if(CreateWindow() == 0){
         printf("Failed to initialize!\n");
         close_win();
     }
-    current->renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    load_Texture("image/bg1.bmp", current);
+    background->renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    textTest->renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    load_Texture_IMG("image/bg1.bmp", background);
+    SDL_Surface *surface = SDL_GetWindowSurface(window);
+    background->tWidth = surface->w; //get sizof background
+    background->tHeight = surface->h;
+    
+    SDL_FreeSurface(surface);
+    TTF_Font *font = TTF_OpenFont("lib/font/text.ttf", 28);
+    SDL_Color textColor = {255, 0, 0};
+    char *text = "Hello World";
+    load_Texture_Text(text, textTest, font, textColor);
     int quit = 0; 
+    ResetRender(background);
     while(!quit){
-        quit = Event(current);
-        Render(current);
+        quit = Event();
+        Render(background, 43, 60);
+        //Render(textTest, 64, 64);
         SDL_Delay(100); 
     }
-    free_texture(current);
+    TTF_CloseFont(font);
+    free_texture(background);
     return SUCCEED;
 }
