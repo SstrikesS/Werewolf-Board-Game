@@ -29,15 +29,19 @@
                                                   phe sói: sói, sói nguyền
 5. To Do (Cái này update liên tục để tạo deadline dí chết từng thằng một)
     - Mạnh : Cùng với Na hoàn thành menu game
-    - Trung : Vẽ biểu đồ user case (chụp ảnh gửi lên đây nhé)
+    - Trung : Thiết kế client - server 
     - NA : Cùng với Mạnh hoàn thành menu game
-    - Thành : Thiết kế client - server đa luồng
+    - Thành : Thiết kế client -server
 6. Giai đoạn phát triển game:
     - Thiết kế giao diện:
         Tuần 2,3. Thiết kế menu game:
                 + Thiết kế background
                         -> Đã xong
                 + Thiết kế menu (bao gồm "Host game" "Join game" "Quick play" "Exit" và , "Setting" - cái này có thể không có)
+                        -> Có thể fix background nếu muốn
+                                -> Background hiện tại dùng SDL_surface nên ko tiện cho việc hiển thị SDL_ttf
+                                -> Có thể sử dụng SDL_image(cái này t chưa cài, muốn sử dụng thì tải về rồi add vào lib, src và dll nữa nhé)
+                                -> Có thể chuyển sang SDL_render sẽ giải quyết vấn đề (cái này Thiện bảo thế)
                         -> Chưa hiển thị được text trên background
                                 -> Chỉnh cỡ chứ hiển thị
                                 -> Chỉnh vị trí hiển thị
@@ -49,11 +53,35 @@
                 + Thiết kế theo phương thức UDP (vì game online nào cũng dùng cái này) 
                         -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
                         -> Tham khảo code thầy cho trên teams
-                        -> Sẽ có thể làm thêm thread ( đa luồng) cho server vì game của mình chơi nhiều người
+                        -> thiết kế theo kiểu mutilple client vs 1 server
+                        -> Làm đa luồng (multiple thread) thì tìm hiểu thư viện pthread.h
+                + Thiết kế packet để gửi nhận qua server
+                        -> Mỗi packet có ý nghĩa riêng và mang thông tin để phân biệt
+                        -> VD : packet chứa tin nhắn, packet chứa thông tin của player, packet chứa hành vi của player, packet chứa request từ player, ...
+                        -> Packet có thể gừi qua lại giữa client-server
+                        -> Việc tạo packet sẽ bảo mật đc game thay vì chỉ gửi string
+                        -> Packet chính là 1 struct chứa 1 số thuộc tính như (char *string, int flag, Player *player, ...)
+                + Sử dụng linklist để quản lý các player
+                        -> Tìm hoặc viết thư viện linklist
+                        -> Data của linklist là struct Player( gồm thông tin người chơi VD: name, ip_addr, port, role, ...)
                 + Làm chatbox 
+                        -> Link tham khảo https://github.com/andrea-covre/client-server-live-chat-service
+                                -> Phải chuyển sang winsock
+                                -> Link trên sử dụng phương thức TCP/IP nên chỉ mang tính tham khảo
                         -> Thiết kế 2 chat box: 1 cho tất cả người chơi, 1 cho role đặc biệt (VD: Ma sói sẽ có thể chat riêng với nhau)
                         -> Kết hợp thiết kế giao diện cho chatbot
         Tuần 6,7,8,9. Thiết kế game play
+                + Random role cho các player 
+                + Thiết kế gameplay buổi sáng
+                        -> Biến vote dùng để đếm số lượng vote;
+                        -> Mỗi người chơi có 1 lượt vote
+                        -> Thời gian thảo luận
+                        -> Skip thời gian thảo luận (sử dụng biến vote)
+                        -> Thời gian vote
+                        -> Kiểm tra biến vote
+                + Thiết kế gameplay buổi tối
+                        + Thiết kế chức năng từng role
+                                -> Thứ tự thiết kế : Thợ săn (Hunter), Phù thủy (Witch), Tiên tri (Seer), Bảo vệ (Bodyguard), Dân làng (Villager)
         Tuần 10, 11, 12. Thiết kế giao diện in game
         Tuần 13. Tối ưu 
         Tuần 14. Tester, fixbug
