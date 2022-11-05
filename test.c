@@ -1,76 +1,99 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
 #include <stdlib.h>
+typedef struct GameStatus{
+    SDL_Texture *texture;
+    SDL_Renderer *renderer;
+}GameStatus;
+SDL_Window *window = NULL;
 const int SCREEN_WIDTH = 1040;
 const int SCREEN_HEIGHT = 770;
-int init(SDL_Window *window){ // Initialize SDL
-    int success = 1;
-    if(SDL_Init(SDL_INIT_VIDEO) != 0){
+#define ERROR 0
+#define SUCCEED 1
+
+int CreateWindow(){ // Create window
+    if(SDL_Init(SDL_INIT_EVERYTHING) != 0){
         printf("SDL could not initialize! SDL_Error %s\n", SDL_GetError());
-        success = 0;
+        return ERROR;
     }else{
         window = SDL_CreateWindow("WereWolf Deluxo Edition", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
         if(window == NULL){
-            printf("Window could not initialize! SDL_Error: %s\n",SDL_GetError());
-            success = 0;
-        }else{
-            load_main_menu_background(window);
-            load_main_menu_option(window);
+            printf("Window could not initialize! SDL_Error: %s\n", SDL_GetError());
+            return ERROR;
         }
     }
-    return success;
+    return SUCCEED;
 }
-int load_main_menu_background(SDL_Window *window){ // Load main menu
-    int success = 1;
-    SDL_Surface *screen;
-    SDL_Surface *background;
-    screen = SDL_GetWindowSurface(window);
-    background = SDL_LoadBMP("image/bg1.bmp");
-    if(background == NULL){
-        printf("SDL_Error: %s\n", SDL_GetError());
-        success = 0;
+
+void load_Texture(char *path, GameStatus *current){ // Load texture
+    SDL_Surface *screen = NULL;
+    screen = SDL_LoadBMP(path);
+    if(screen == NULL){
+        printf("Cant create surface! SDL_Error: %s\n", SDL_GetError());
+        exit(ERROR);
     }
-    SDL_BlitSurface(background , NULL, screen, NULL);
-    SDL_FreeSurface(background);
-    SDL_UpdateWindowSurface(window);
-    return success;
+    current->texture = SDL_CreateTextureFromSurface(current->renderer, screen);
+    SDL_FreeSurface(screen);
 }
-void load_main_menu_option(SDL_Window *window){ //Load option
-    TTF_Font * font = TTF_OpenFont("Sans.ttf", 24);
-    SDL_Renderer *renderer;
-    SDL_Color White = {255,0,0};
-    SDL_Surface * textSurface = TTF_RenderText_Solid(font, "asdijfdasfjkasf", White);
-    SDL_Texture * textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
-    SDL_Rect Message_rect; //create a rect
-    Message_rect.x = 0;  //controls the rect's x coordinate 
-    Message_rect.y = 0; // controls the rect's y coordinte
-    Message_rect.w = 100; // controls the width of the rect
-    Message_rect.h = 100; // controls the height of the rect
-    SDL_RenderCopy(renderer, textTexture, NULL, &Message_rect);
-    // SDL_DestroyTexture(textTexture);
-    // SDL_DestroyRenderer(renderer);
+
+void Render(GameStatus *current){
+    SDL_SetRenderDrawColor(current->renderer, 255, 0, 0, 255);
+    SDL_RenderClear(current->renderer);
+    SDL_SetRenderDrawColor(current->renderer, 255, 255, 255, 255);
+    //SDL_Rect rect = {64, 64, 64, 64};
+    SDL_RenderCopy(current->renderer, current->texture, NULL, NULL);
+    SDL_RenderPresent(current->renderer);
 }
-void close_win(SDL_Window *window){ //Close the game
+
+void close_win(){ //Close the game
     SDL_DestroyWindow(window);
     window = NULL;
     SDL_Quit();
 }
-int main(int argc, char** argv) {
-    SDL_Window *window = NULL;
-    if(init(window) == 0){
-        printf("Failed to initialize!\n");
-    }else{
-        SDL_Event e; 
-        int quit = 0; 
-        while( quit == 0 ){ 
-            while( SDL_PollEvent(&e)){ 
-                if(e.type == SDL_QUIT) 
-                    quit = 1; 
-            } 
+
+void free_texture(GameStatus *current){
+    SDL_DestroyTexture(current->texture);
+    SDL_DestroyRenderer(current->renderer);
+}
+
+int Event(GameStatus *current){
+    SDL_Event e;
+    int value = 0;
+    while(SDL_PollEvent(&e)){
+        switch (e.type){
+            case SDL_QUIT:
+                value = 1;
+                break;
+            case SDL_WINDOWEVENT_CLOSE:
+                if(window){
+                    close_win();
+                    value = 1;
+                }
+                break;
+            default:
+                break;  
         }
     }
-    return 0;
+    return value;
+}
+int main(int argc, char** argv) {
+    GameStatus *current = (GameStatus *)malloc(sizeof(GameStatus));
+    if(CreateWindow() == 0){
+        printf("Failed to initialize!\n");
+        close_win();
+    }
+    current->renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    load_Texture("image/bg1.bmp", current);
+    int quit = 0; 
+    while(!quit){
+        quit = Event(current);
+        Render(current);
+        SDL_Delay(100); 
+    }
+    free_texture(current);
+    return SUCCEED;
 }
