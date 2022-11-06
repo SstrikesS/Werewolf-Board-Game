@@ -37,20 +37,16 @@
         Tuần 2,3. Thiết kế menu game:
                 + Thiết kế background
                         -> Đã xong
-                + Thiết kế menu (bao gồm "Host game" "Join game" "Quick play" "Exit" và , "Setting" - cái này có thể không có)
-                        -> Có thể fix background nếu muốn
-                                -> Background hiện tại dùng SDL_surface nên ko tiện cho việc hiển thị SDL_ttf
-                                -> Có thể sử dụng SDL_image(cái này t chưa cài, muốn sử dụng thì tải về rồi add vào lib, src và dll nữa nhé)
-                                -> Có thể chuyển sang SDL_render sẽ giải quyết vấn đề (cái này Thiện bảo thế)
+                + Thiết kế menu (bao gồm "Host game" "Join game" "Quick play" "Exit" và , "Setting" - cái này có thể không có) 
                         -> Chưa hiển thị được text trên background
                                 -> Chỉnh cỡ chứ hiển thị
-                                -> Chỉnh vị trí hiển thị
+                                -> Chỉnh vị trí hiển thị 
                         -> Chưa làm được event khi sử dụng menu (chỉ cần làm nút Exit thôi)
                                 -> Event khi trỏ chuột đến 1 mục thì sẽ hightlight mục đang chọn
                                 -> Event khi bấm vào mục sẽ thực hiện chức năng mục đó
                         -> Học : SDL 1->10, 16
         Tuần 4,5. Thiết kế client - server
-                + Thiết kế theo phương thức UDP (vì game online nào cũng dùng cái này) 
+                + Thiết kế theo phương thức TCP/IP (game cuả chúng ta làm ko cần thiết phải nhanh như mấy game FPS hay đối khàng, làm TCP cho dế) 
                         -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
                         -> Tham khảo code thầy cho trên teams
                         -> thiết kế theo kiểu mutilple client vs 1 server
@@ -67,7 +63,6 @@
                 + Làm chatbox 
                         -> Link tham khảo https://github.com/andrea-covre/client-server-live-chat-service
                                 -> Phải chuyển sang winsock
-                                -> Link trên sử dụng phương thức TCP/IP nên chỉ mang tính tham khảo
                         -> Thiết kế 2 chat box: 1 cho tất cả người chơi, 1 cho role đặc biệt (VD: Ma sói sẽ có thể chat riêng với nhau)
                         -> Kết hợp thiết kế giao diện cho chatbot
         Tuần 6,7,8,9. Thiết kế game play
