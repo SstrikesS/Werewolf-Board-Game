@@ -45,6 +45,7 @@
                                 -> Event khi trỏ chuột đến 1 mục thì sẽ hightlight mục đang chọn
                                 -> Event khi bấm vào mục sẽ thực hiện chức năng mục đó
                         -> Học : SDL 1 -> 10, 16, 17
+                        https://github.com/mcksp/sdl-game
         Tuần 4,5. Thiết kế client - server
                 + Thiết kế theo phương thức TCP/IP (game cuả chúng ta làm ko cần thiết phải nhanh như mấy game FPS hay đối khàng, làm TCP cho dế) 
                         -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
