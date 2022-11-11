@@ -39,12 +39,13 @@
                         -> Đã xong
                 + Thiết kế menu (bao gồm "Host game" "Join game" "Quick play" "Exit" và , "Setting" - cái này có thể không có) 
                         -> Chưa hiển thị được text trên background
-                                -> Chỉnh cỡ chứ hiển thị
-                                -> Chỉnh vị trí hiển thị 
-                        -> Chưa làm được event khi sử dụng menu (chỉ cần làm nút Exit thôi)
+                                -> Chỉnh cỡ chứ hiển thị (Đã xong)
+                                -> Chỉnh vị trí hiển thị (Đã xong)
+                        -> Làm được event khi sử dụng menu
                                 -> Event khi trỏ chuột đến 1 mục thì sẽ hightlight mục đang chọn
                                 -> Event khi bấm vào mục sẽ thực hiện chức năng mục đó
-                        -> Học : SDL 1->10, 16
+                        -> Học : SDL 1 -> 10, 16, 17
+                        https://github.com/mcksp/sdl-game
         Tuần 4,5. Thiết kế client - server
                 + Thiết kế theo phương thức TCP/IP (game cuả chúng ta làm ko cần thiết phải nhanh như mấy game FPS hay đối khàng, làm TCP cho dế) 
                         -> Link học https://www.geeksforgeeks.org/udp-server-client-implementation-c/
