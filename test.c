@@ -7,18 +7,45 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define HOST_GAME 1
+#define JOIN_GAME 2
+#define EXIT_GAME 3
+#define ESC -1
+
 typedef struct GameTexture{
     SDL_Texture *texture;
     int tWidth;
     int tHeight;
 }GameTexture;
 
+int check_mouse_pos(SDL_Rect rect){
+    int x, y;
+    SDL_GetMouseState(&x, &y);
+    int value = 1;
+    if(x < rect.x){
+        value = -1;
+    }
+    else if(x > rect.x + rect.w){
+        value = -1;
+    }
+    else if(y < rect.y){
+        value = -1;
+    }
+    else if(y > rect.y + rect.h){
+        value = -1;
+    }
+    return value;
+}
+
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 const int SCREEN_WIDTH = 1040;
 const int SCREEN_HEIGHT = 770;
+
 #define ERROR 0
 #define SUCCEED 1
+#define INSIDE 1
+#define OUTSIDE 0
 
 int CreateWindow(){ // Create window
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -98,57 +125,132 @@ void close_win(){ //Close the game
     IMG_Quit();
     SDL_Quit();
 }
-
-void free_texture(GameTexture *current){ //free current state
-    SDL_DestroyTexture(current->texture);
-}
-
-void Main_Taskbar(){ // 
-    GameTexture **MenuText = (GameTexture **)malloc(sizeof(GameTexture *) * 3);
+int InGame_Screen(int selection);
+int Main_Screen(){ // 
+    ResetRender();
     int i;
-    for(i = 0; i < 3; i++){
-        MenuText[i] = (GameTexture *)malloc(sizeof(GameTexture) * 3);
-    }
-    TTF_Font *font = TTF_OpenFont("lib/font/text.ttf", 35);
-    SDL_Color textColor = {255, 0, 0};
+    int Menu_item = 3;
+    SDL_Rect button[Menu_item];
 
-    char *menu[3] = {"Join Game", "Host Game", "Exit"};
-    for(i = 0; i < 3; i++){
-        load_Texture_Text(menu[i], MenuText[i], font, textColor);
+    GameTexture **MenuText = (GameTexture **)malloc(sizeof(GameTexture *) * Menu_item);
+    for(i = 0; i < Menu_item; i++){
+        MenuText[i] = (GameTexture *)malloc(sizeof(GameTexture) * Menu_item);
     }
-    Render(MenuText[0], (SCREEN_WIDTH - MenuText[0]->tWidth) / 2,(SCREEN_HEIGHT - MenuText[0]->tHeight * 2) / 2);
-    Render(MenuText[1], (SCREEN_WIDTH - MenuText[1]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[1]->tHeight * 2) / 2);
-    Render(MenuText[2], (SCREEN_WIDTH - MenuText[2]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[2]->tHeight * 6) / 2);
-}
-
-void Main_Background(){
     GameTexture *background = (GameTexture *)malloc(sizeof(GameTexture));
-    load_Texture_IMG("image/bg1.bmp", background);
+    
+    SDL_Color textColor = {255, 0, 0};
+    SDL_Color highlight_Color = {255, 255, 0};
+    TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
+    char *menu[] = {"Join Game", "Host Game", "Exit"};
+    int select[] = {0, 0, 0};
+    SDL_Event menu_e;
+
+    load_Texture_IMG("resource/bg1.bmp", background);
     SDL_Surface *surface = SDL_GetWindowSurface(window);
-    background->tWidth = surface->w; //get sizof background
+    background->tWidth = surface->w; //get sizeof background
     background->tHeight = surface->h;
     SDL_FreeSurface(surface);
     Render(background, 0, 0);
-}
-int Event(){ // event of the game
-    SDL_Event e;
-    int value = 0;
-    while(SDL_PollEvent(&e)){
-        switch (e.type){
+
+    for(i = 0; i < Menu_item; i++){
+            load_Texture_Text(menu[i], MenuText[i], font, textColor);
+            button[i] = Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
+            SDL_RenderPresent(renderer);
+    }
+    while(1){
+        while (SDL_PollEvent(&menu_e)){
+            switch (menu_e.type){
             case SDL_QUIT:
-                value = 1;
+                close_win();
+                exit(0);
                 break;
-            case SDL_WINDOWEVENT_CLOSE:
-                if(window){
-                    close_win();
-                    value = 1;
+            case SDL_MOUSEMOTION:
+                for(i = 0; i < Menu_item; i++){
+                    if(check_mouse_pos(button[i]) == 1){
+                        if(select[i] == 0){
+                            select[i] = i + 1;
+                            load_Texture_Text(menu[i], MenuText[i], font, highlight_Color);
+                            Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
+                            SDL_RenderPresent(renderer);
+                        }
+                    }
+                    else{
+                        if(select[i] != 0){
+                            select[i] = 0;
+                            load_Texture_Text(menu[i], MenuText[i], font, textColor);
+                            Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
+                            SDL_RenderPresent(renderer);
+                        }
+                    }
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                for(i = 0; i < Menu_item; i++){
+                    if(check_mouse_pos(button[i]) == 1){
+                        select[i] = i + 1;
+                        return select[i];
+                    }
+                }
+            default:
+                break;
+            }
+        }
+    }
+    for(i = 0; i < Menu_item; i++){
+        SDL_DestroyTexture(MenuText[i]->texture);
+        MenuText[i]->tHeight = 0;
+        MenuText[i]->tWidth = 0;
+    }
+    SDL_DestroyTexture(background->texture);
+    background->tHeight = 0;
+    background->tWidth = 0;
+    return -1;
+}
+
+int InGame_Screen(int selection){
+    ResetRender();
+    SDL_Event game_e;
+    if(selection == EXIT_GAME){
+        close_win();
+        exit(0);
+    }else if(selection == HOST_GAME){
+        ResetRender();
+        GameTexture *test = (GameTexture *)malloc(sizeof(GameTexture));
+        SDL_Color textColor = {255, 255, 0};
+        TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
+        char *text = "This is Join Game screen!";
+        load_Texture_Text(text, test, font, textColor);
+        Render(test, 55, 55);
+        SDL_RenderPresent(renderer);
+    }else if(selection == JOIN_GAME){
+        ResetRender();
+        GameTexture *test2 = (GameTexture *)malloc(sizeof(GameTexture));
+        SDL_Color textColor2 = {255, 255, 0};
+        TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
+        char *text = "This is Host Game screen!";
+        load_Texture_Text(text, test2, font, textColor2);
+        Render(test2, 55, 55);
+        SDL_RenderPresent(renderer);        
+    }
+    while(1){
+        while(SDL_PollEvent(&game_e)){
+            switch (game_e.type){
+            case SDL_QUIT:
+                close_win();
+                exit(0);
+                break;
+            case SDL_KEYDOWN:
+                if(game_e.key.keysym.sym == SDLK_ESCAPE){
+                    return ESC;
                 }
                 break;
             default:
-                break;  
+                break;
+            }
+
         }
     }
-    return value;
+    return 0;
 }
 
 int main(int argc, char** argv) {
@@ -156,14 +258,11 @@ int main(int argc, char** argv) {
     if(CreateWindow() == 0){
         exit(ERROR);
     }
-    ResetRender();
-    Main_Background();
-    Main_Taskbar();
-
-    while(!quit){
-        quit = Event();
-        SDL_Delay(10); 
-    }
+    int selection = 0;
+    do{
+        selection = Main_Screen();
+        selection = InGame_Screen(selection);
+    }while(selection == ESC);
     close_win();
     return SUCCEED;
 }
