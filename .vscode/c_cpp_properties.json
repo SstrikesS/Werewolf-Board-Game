@@ -14,7 +14,6 @@
             "windowsSdkVersion": "10.0.17763.0",
             "compilerPath": "C:/MinGW/bin/gcc.exe",
             "cStandard": "gnu11",
-            "cppStandard": "gnu++14",
             "intelliSenseMode": "windows-gcc-x86",
             "configurationProvider": "ms-vscode.makefile-tools"
         }

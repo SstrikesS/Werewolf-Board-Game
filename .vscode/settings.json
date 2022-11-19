@@ -1,9 +1,21 @@
 {
     "files.associations": {
+        "*.php": "html",
         "sdl_test_font.h": "c",
         "winsock2.h": "c",
         "ws2tcpip.h": "c",
         "stdlib.h": "c",
-        "string.h": "c"
-    }
+        "string.h": "c",
+        "strings.h": "c",
+        "stdio.h": "c",
+        "unistd.h": "c"
+    },
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "c:\\Users\\thanh\\Downloads\\Programs\\Werewolf-Board-Game",
+            "binaryPath": "c:\\Users\\thanh\\Downloads\\Programs\\Werewolf-Board-Game\\test",
+            "binaryArgs": []
+        }
+    ],
+    "C_Cpp.errorSquiggles": "Enabled"
 }
