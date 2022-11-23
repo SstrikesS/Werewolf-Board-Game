@@ -1,24 +1,27 @@
-#include <stdio.h>
 #include <winsock2.h>
-#include "linklist.h"
 #include "packet.h"
+#include "linklist.h"
+#include <pthread.h>
+#include "player.h"
 
 #pragma comment(lib,"ws2_32.lib") 
 
 #define MAX_CLIENT 12 //Max clients can connect to server
 
-typedef struct Player{
-	struct sockaddr_in player_client;
-	char *name;
-	int id;
-}Player;
 // local variable
 SOCKET sockfd;
 struct sockaddr_in server_addr, client_addr;
+llist *client_list;
+int client_in_server = 0;
+
+typedef struct Argument{
+	Player *current_player; 
+	int type;
+	char message[MAX_OF_CHAR_MESSAGE];
+}Argument;
 
 int setupServer(){ 
     WSADATA wsa;
-	unsigned int length = sizeof(client_addr);
     if(WSAStartup(MAKEWORD(2, 2), &wsa) != 0){
 		printf("Failed. Error Code : %d\n", WSAGetLastError());
 		return ERROR_RETURN;
@@ -45,27 +48,79 @@ void closeServer(){
 	WSACleanup();
 }
 
+void getClientInfo(Packet *pack){
+	Player *client = calloc(1, sizeof(Player));
+	client = createPlayer(client_addr, pack->message, ++client_in_server);
+	push_llist(client_list, client);
+}
+
+void *client_handle(void *argument){
+	Packet *packet = (Packet *)malloc(sizeof(Packet));
+	char *message = (char *)malloc(sizeof(char) * MAX_OF_CHAR_MESSAGE);
+	Argument *arg = (Argument *)argument;
+	struct node *current = *client_list;
+	int length = sizeof(arg->current_player->player_client);
+	enum pack_type type = (enum pack_type)arg->type;
+	switch (type){
+	case PUBLIC_MESSAGE_PACK:
+		packet = MessageParse(arg->message);
+		printf("Received packet from %s port %d: %s\n", inet_ntoa(arg->current_player->player_client.sin_addr), ntohs(arg->current_player->player_client.sin_port), arg->message);
+		message = PacketParse_PubMess(packet, arg->current_player->name);
+		while(current != NULL){
+			Player *current_player = (Player *)current->data;
+			sendto(sockfd, message, strlen(message), 0, (SOCKADDR *) &current_player->player_client, length);
+			current = current->next;
+		}
+		break;
+	case EXIT_PACK:
+		printf("Exit packet received!\n");
+		break;
+	default:
+		printf("Can't recognize packet %s!\n", arg->message);
+		break;
+	}
+}
 
 int main(){
-	int length, buffer_size;
+	client_list = create_llist(NULL);
+    int length, buffer_size;
 	char *buffer = (char *)malloc(sizeof(char) * MAX_OF_CHAR_MESSAGE);
+	char *welcome = "Welcome to our server!";
 	length = sizeof(server_addr) ;
-	Packet *pack;
-    if(setupServer() == SUCCEED_RETURN){
+	Packet *pack = (Packet *)malloc(sizeof(Packet));
+
+	pthread_t tid[MAX_CLIENT];
+
+	if(setupServer() == SUCCEED_RETURN){
         printf("Server is now online...\n");
         while(1){
-			printf("Waiting for request...\n");
+			memset(&client_addr, 0, sizeof(client_addr));
             memset(buffer, '\0', MAX_OF_CHAR_MESSAGE);
-			memset(pack, 0, sizeof(pack));
-            buffer_size = recvfrom(sockfd, buffer, MAX_OF_CHAR_MESSAGE, 0, (SOCKADDR *) &client_addr, &length);
+			ZeroMemory(pack, sizeof(pack));
+            buffer_size = recvfrom(sockfd, buffer, MAX_OF_CHAR_MESSAGE, 0, (SOCKADDR *)&client_addr, &length);
 			buffer[buffer_size] = '\0';
-			pack = MessageParse(buffer);
-			if(pack->type == EXIT_PACK){
-				printf("Exit packet received!\n");
-				break;
-			}else if(pack->type == PUBLIC_MESSAGE_PACK){
-				printf("Received packet from %s port %d: %s\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), pack->message);
-            	sendto(sockfd, pack->message, strlen(pack->message), 0, (SOCKADDR *) &client_addr, length);
+			int type =  GetPackType(buffer);
+			if(type == (int)LOGIN_PACK){
+				pack = MessageParse(buffer);
+				getClientInfo(pack);
+				sendto(sockfd, welcome, strlen(welcome), 0, (SOCKADDR *) &client_addr, length);
+				Player *current_player = (Player *)get_head_data(client_list);
+				printf("%s from port %d and ip %s enter chat room\n", current_player->name, ntohs(current_player->player_client.sin_port), inet_ntoa(current_player->player_client.sin_addr));
+			}else{
+				Player *current_player = createPlayer(client_addr, NULL, -1);
+				current_player = (Player *) find_node(client_list, current_player, findPlayer);
+				Argument *arg = (Argument *)malloc(sizeof(Argument));
+				arg->current_player = (Player *)malloc(sizeof(Player));
+				memset(arg->message, '\0', MAX_OF_CHAR_MESSAGE);
+				arg->type = type;
+				strcpy(arg->message, buffer);
+				arg->current_player->id = current_player->id;
+				strcpy(arg->current_player->name, current_player->name);
+				arg->current_player->player_client = current_player->player_client;
+				if(current_player != NULL){
+					pthread_create(&tid[current_player->id], NULL, &client_handle, (void *)arg);
+					pthread_join(tid[current_player->id], NULL);
+				}
 			}
         }
     }

@@ -8,7 +8,8 @@
         "string.h": "c",
         "strings.h": "c",
         "stdio.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "pthread.h": "c"
     },
     "makefile.launchConfigurations": [
         {
