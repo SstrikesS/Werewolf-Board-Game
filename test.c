@@ -11,6 +11,7 @@
 #define JOIN_GAME 2
 #define EXIT_GAME 3
 #define ESC -1
+#define MAX_CHAR 44
 
 typedef struct GameTexture{
     SDL_Texture *texture;
@@ -76,7 +77,8 @@ int CreateWindow(){ // Create window
 }
 
 void load_Texture_Text(const char *text, GameTexture *current, TTF_Font *font, SDL_Color textColor){
-    SDL_Surface *screen = TTF_RenderUTF8_Blended(font, text, textColor);  
+    // SDL_Surface *screen = TTF_RenderUTF8_Blended(font, text, textColor);
+    SDL_Surface *screen = TTF_RenderText_Solid(font, text, textColor);
     if(screen == NULL){
         printf("Cant create surface! SDL_Error: %s\n", SDL_GetError());
         exit(ERROR);
@@ -207,6 +209,52 @@ int Main_Screen(){ //
     return -1;
 }
 
+void ChatBoxText(char *inputText, int h) {
+    GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
+    for (int i = 0; i < 10; i++) {
+        test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
+    }
+    char *inputMessage = (char*)calloc(200, sizeof(char));
+    memset(inputMessage, '\0', 200);
+    strcpy(inputMessage, inputText);
+    inputMessage[strlen(inputMessage)] = '\0';
+    printf("%s\n", inputMessage);
+    char *cutMessage = calloc(MAX_CHAR + 1, sizeof(char));
+    SDL_Color inputMessage_Color = {255, 255, 255};
+    TTF_Font *font2 = TTF_OpenFont("resource/times.ttf", 15);
+    int i = 0;
+    
+    while (strlen(inputMessage) > MAX_CHAR)
+    {
+        // printf("1");
+        memset(cutMessage, '\0', sizeof(char));
+        strncpy(cutMessage, inputMessage, MAX_CHAR);
+        cutMessage[strlen(cutMessage)] = '\0';
+        printf("%s\n", cutMessage);
+        // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
+        // inputMessage[strlen(inputMessage) - 20] = '\0';
+        for (int i = 0; i < strlen(inputMessage) - MAX_CHAR; i++) {
+            inputMessage[i] = inputMessage[i + MAX_CHAR];
+            // printf("%c", inputMessage[i]);
+        }
+        inputMessage[strlen(inputMessage) - MAX_CHAR] = '\0';
+        printf("%s\n", inputMessage);
+        load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
+        test4[i]->tWidth = 300;
+        // test4->tHeight = 300;
+        Render(test4[i], 102, 460 + h + i * 18);
+        i++;
+    }
+    if (strlen(inputMessage) <= MAX_CHAR) {
+        load_Texture_Text(inputMessage, test4[i], font2, inputMessage_Color);
+        // test4[i]->tWidth = 300;
+        // test4->tHeight = 300;
+        Render(test4[i], 102, 460 + h + i * 18);
+    }
+    SDL_RenderPresent(renderer);        
+}
+
+
 int InGame_Screen(int selection){
     ResetRender();
     SDL_Event game_e;
@@ -235,36 +283,54 @@ int InGame_Screen(int selection){
         test3->tHeight = 360;
         load_Texture_IMG("resource/chatboxPic.jpg", test3);
         Render(test3, 10, 400);
-        GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
-        for (int i = 0; i < 10; i++) {
-            test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
-        }
-        char *inputMessage = (char*)calloc(100, sizeof(char));
-        strcpy(inputMessage, "vacygiulwcilgiugcbwiacb qb i bwieb k i ur qukb rjq   q rqbb r r biusbiuceb wiq vyu bu kbwfiubewi");
-        char *cutMessage = calloc(20, sizeof(char));
-        SDL_Color inputMessage_Color = {117, 174, 111};
-        TTF_Font *font2 = TTF_OpenFont("resource/font.ttf", 15);
-        int i = 0;
-        while (strlen(inputMessage) > 20)
-        {
-            memset(cutMessage, '\0', sizeof(char));
-            strncpy(cutMessage, inputMessage, 20);
-            printf("%s\n", cutMessage);
-            // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
-            // inputMessage[strlen(inputMessage) - 20] = '\0';
-            for (int i = 0; i < strlen(inputMessage) - 20; i++) {
-                inputMessage[i] = inputMessage[i + 20];
-                printf("%c", inputMessage[i]);
-            }
-            inputMessage[strlen(inputMessage) - 20] = '\0';
-            printf("%s\n", inputMessage);
-            load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
-            test4[i]->tWidth = 300;
-            // test4->tHeight = 300;
-            Render(test4[i], 105, 460 + i * 20);
-            i++;
-        }
-        SDL_RenderPresent(renderer);        
+        char *trungvt = "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ";
+        char *manhml = "manhml: Hello there:))))I'm a seer";
+        char *na = "You: Don't trust trumpvt:)";
+        ChatBoxText(trungvt, 0);
+        ChatBoxText(manhml, 18 * 2);
+        ChatBoxText(na, 18 * 3);
+    //     GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
+    //     for (int i = 0; i < 10; i++) {
+    //         test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
+    //     }
+    //     char *inputMessage = (char*)calloc(200, sizeof(char));
+    //     memset(inputMessage, '\0', 200);
+    //     strcpy(inputMessage, "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ");
+    //     inputMessage[strlen(inputMessage)] = '\0';
+    //     printf("%s\n", inputMessage);
+    //     char *cutMessage = calloc(MAX_CHAR + 1, sizeof(char));
+    //     SDL_Color inputMessage_Color = {255, 255, 255};
+    //     TTF_Font *font2 = TTF_OpenFont("resource/times.ttf", 15);
+    //     int i = 0;
+        
+    //     while (strlen(inputMessage) > MAX_CHAR)
+    //     {
+    //         // printf("1");
+    //         memset(cutMessage, '\0', sizeof(char));
+    //         strncpy(cutMessage, inputMessage, MAX_CHAR);
+    //         cutMessage[strlen(cutMessage)] = '\0';
+    //         printf("%s\n", cutMessage);
+    //         // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
+    //         // inputMessage[strlen(inputMessage) - 20] = '\0';
+    //         for (int i = 0; i < strlen(inputMessage) - MAX_CHAR; i++) {
+    //             inputMessage[i] = inputMessage[i + MAX_CHAR];
+    //             // printf("%c", inputMessage[i]);
+    //         }
+    //         inputMessage[strlen(inputMessage) - MAX_CHAR] = '\0';
+    //         printf("%s\n", inputMessage);
+    //         load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
+    //         test4[i]->tWidth = 300;
+    //         // test4->tHeight = 300;
+    //         Render(test4[i], 102, 460 + i * 18);
+    //         i++;
+    //     }
+    //     if (strlen(inputMessage) <= MAX_CHAR) {
+    //         load_Texture_Text(inputMessage, test4[i], font2, inputMessage_Color);
+    //         // test4[i]->tWidth = 300;
+    //         // test4->tHeight = 300;
+    //         Render(test4[i], 102, 460 + i * 18);
+    //     }
+    //     SDL_RenderPresent(renderer);        
     }
     while(1){
         while(SDL_PollEvent(&game_e)){
