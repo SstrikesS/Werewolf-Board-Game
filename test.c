@@ -230,6 +230,40 @@ int InGame_Screen(int selection){
         char *text = "This is Host Game screen!";
         load_Texture_Text(text, test2, font, textColor2);
         Render(test2, 55, 55);
+        GameTexture *test3 = (GameTexture *)malloc(sizeof(GameTexture));
+        test3->tWidth = 480;
+        test3->tHeight = 360;
+        load_Texture_IMG("resource/chatboxPic.jpg", test3);
+        Render(test3, 10, 400);
+        GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
+        for (int i = 0; i < 10; i++) {
+            test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
+        }
+        char *inputMessage = (char*)calloc(100, sizeof(char));
+        strcpy(inputMessage, "vacygiulwcilgiugcbwiacb qb i bwieb k i ur qukb rjq   q rqbb r r biusbiuceb wiq vyu bu kbwfiubewi");
+        char *cutMessage = calloc(20, sizeof(char));
+        SDL_Color inputMessage_Color = {117, 174, 111};
+        TTF_Font *font2 = TTF_OpenFont("resource/font.ttf", 15);
+        int i = 0;
+        while (strlen(inputMessage) > 20)
+        {
+            memset(cutMessage, '\0', sizeof(char));
+            strncpy(cutMessage, inputMessage, 20);
+            printf("%s\n", cutMessage);
+            // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
+            // inputMessage[strlen(inputMessage) - 20] = '\0';
+            for (int i = 0; i < strlen(inputMessage) - 20; i++) {
+                inputMessage[i] = inputMessage[i + 20];
+                printf("%c", inputMessage[i]);
+            }
+            inputMessage[strlen(inputMessage) - 20] = '\0';
+            printf("%s\n", inputMessage);
+            load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
+            test4[i]->tWidth = 300;
+            // test4->tHeight = 300;
+            Render(test4[i], 105, 460 + i * 20);
+            i++;
+        }
         SDL_RenderPresent(renderer);        
     }
     while(1){
