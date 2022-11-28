@@ -11,13 +11,33 @@
 #define JOIN_GAME 2
 #define EXIT_GAME 3
 #define ESC -1
-#define MAX_CHAR 44
+#define MAX_CHAR 55
+#define ERROR 0
+#define SUCCEED 1
 
 typedef struct GameTexture{
     SDL_Texture *texture;
     int tWidth;
     int tHeight;
 }GameTexture;
+
+SDL_Window *window = NULL;
+SDL_Renderer *renderer = NULL;
+const int SCREEN_WIDTH = 1040;
+const int SCREEN_HEIGHT = 770;
+
+char **MessageLine;
+int current_line = 0;
+SDL_Rect inputMessage_rect;
+SDL_Rect chatBox_rect;
+SDL_Rect send_Button;
+SDL_Rect showMessage_rect;
+GameTexture *sendButton;
+SDL_Rect *messLine_rect;
+SDL_Color white_color = {255, 255, 255};
+SDL_Color black_color = {0, 0, 0};
+SDL_Color red_color = {255, 0, 0};
+SDL_Color yellow_color = {255, 255, 0};
 
 int check_mouse_pos(SDL_Rect rect){
     int x, y;
@@ -37,16 +57,6 @@ int check_mouse_pos(SDL_Rect rect){
     }
     return value;
 }
-
-SDL_Window *window = NULL;
-SDL_Renderer *renderer = NULL;
-const int SCREEN_WIDTH = 1040;
-const int SCREEN_HEIGHT = 770;
-
-#define ERROR 0
-#define SUCCEED 1
-#define INSIDE 1
-#define OUTSIDE 0
 
 int CreateWindow(){ // Create window
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -111,6 +121,15 @@ void ResetRender(){ //reset window to black
     SDL_RenderPresent(renderer);
 }
 
+void ClearRenderRect(SDL_Rect rect){
+    SDL_Rect tmp = rect;
+    tmp.h = tmp.h - 2;
+    tmp.w = tmp.w - 2;
+    tmp.x = tmp.x + 1;
+    tmp.y = tmp.y + 1;
+    SDL_RenderFillRect(renderer, &tmp);
+}
+
 SDL_Rect Render(GameTexture *current, int width, int height){ // Render texture and display at position [x,y]
     SDL_Rect rect = {width, height, current->tWidth, current->tHeight}; 
     SDL_RenderCopy(renderer, current->texture, NULL, &rect);
@@ -140,8 +159,6 @@ int Main_Screen(){ //
     }
     GameTexture *background = (GameTexture *)malloc(sizeof(GameTexture));
     
-    SDL_Color textColor = {255, 0, 0};
-    SDL_Color highlight_Color = {255, 255, 0};
     TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
     char *menu[] = {"Join Game", "Host Game", "Exit"};
     int select[] = {0, 0, 0};
@@ -155,7 +172,7 @@ int Main_Screen(){ //
     Render(background, 0, 0);
 
     for(i = 0; i < Menu_item; i++){
-            load_Texture_Text(menu[i], MenuText[i], font, textColor);
+            load_Texture_Text(menu[i], MenuText[i], font, red_color);
             button[i] = Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
             SDL_RenderPresent(renderer);
     }
@@ -171,7 +188,7 @@ int Main_Screen(){ //
                     if(check_mouse_pos(button[i]) == 1){
                         if(select[i] == 0){
                             select[i] = i + 1;
-                            load_Texture_Text(menu[i], MenuText[i], font, highlight_Color);
+                            load_Texture_Text(menu[i], MenuText[i], font, yellow_color);
                             Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
                             SDL_RenderPresent(renderer);
                         }
@@ -179,7 +196,7 @@ int Main_Screen(){ //
                     else{
                         if(select[i] != 0){
                             select[i] = 0;
-                            load_Texture_Text(menu[i], MenuText[i], font, textColor);
+                            load_Texture_Text(menu[i], MenuText[i], font, red_color);
                             Render(MenuText[i], (SCREEN_WIDTH - MenuText[i]->tWidth) / 2,(SCREEN_HEIGHT + MenuText[0]->tHeight * (i * 4 - 2)) / 2);
                             SDL_RenderPresent(renderer);
                         }
@@ -209,49 +226,65 @@ int Main_Screen(){ //
     return -1;
 }
 
-void ChatBoxText(char *inputText, int h) {
-    GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
-    for (int i = 0; i < 10; i++) {
-        test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
-    }
+void ChatBoxUI(){
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    //chatbox
+    chatBox_rect.h = 360;
+    chatBox_rect.w = 360;
+    chatBox_rect.x = 10;
+    chatBox_rect.y = 400;
+    SDL_RenderDrawRect(renderer, &chatBox_rect);
+    //inputMessageBox
+    inputMessage_rect.h = 22;
+    inputMessage_rect.w = 290;
+    inputMessage_rect.x = 15;
+    inputMessage_rect.y = 730;
+    SDL_RenderDrawRect(renderer, &inputMessage_rect);
+    //showMessageBox
+    showMessage_rect.h = 310;
+    showMessage_rect.w = 350;
+    showMessage_rect.x = 15;
+    showMessage_rect.y = 410;
+    SDL_RenderDrawRect(renderer, &showMessage_rect);
+    //send Button
+    send_Button.h = 22;
+    send_Button.w = 55;
+    send_Button.x = 310;
+    send_Button.y = 730;
+    SDL_RenderDrawRect(renderer, &send_Button);
+    char *send = " Send";
+
+    sendButton = calloc(1, sizeof(GameTexture));
+    TTF_Font *font = TTF_OpenFont("resource/times.ttf", 15);
+    load_Texture_Text(send, sendButton, font, white_color);
+    
+    Render(sendButton, 315, 731);
+    SDL_RenderPresent(renderer);
+}
+void splitText(char *inputText) {
     char *inputMessage = (char*)calloc(200, sizeof(char));
     memset(inputMessage, '\0', 200);
-    strcpy(inputMessage, inputText);
+    strcat(inputMessage, "You: ");
+    strcat(inputMessage, inputText);
     inputMessage[strlen(inputMessage)] = '\0';
-    printf("%s\n", inputMessage);
-    char *cutMessage = calloc(MAX_CHAR + 1, sizeof(char));
-    SDL_Color inputMessage_Color = {255, 255, 255};
-    TTF_Font *font2 = TTF_OpenFont("resource/times.ttf", 15);
     int i = 0;
-    
     while (strlen(inputMessage) > MAX_CHAR)
     {
-        // printf("1");
-        memset(cutMessage, '\0', sizeof(char));
-        strncpy(cutMessage, inputMessage, MAX_CHAR);
-        cutMessage[strlen(cutMessage)] = '\0';
-        printf("%s\n", cutMessage);
-        // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
-        // inputMessage[strlen(inputMessage) - 20] = '\0';
+        memset(MessageLine[current_line], '\0', sizeof(char));
+        strncpy(MessageLine[current_line], inputMessage, MAX_CHAR);
+        MessageLine[current_line][strlen(MessageLine[current_line])] = '\0';
+        printf("%s\n", MessageLine[current_line]);
         for (int i = 0; i < strlen(inputMessage) - MAX_CHAR; i++) {
             inputMessage[i] = inputMessage[i + MAX_CHAR];
-            // printf("%c", inputMessage[i]);
         }
         inputMessage[strlen(inputMessage) - MAX_CHAR] = '\0';
-        printf("%s\n", inputMessage);
-        load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
-        test4[i]->tWidth = 300;
-        // test4->tHeight = 300;
-        Render(test4[i], 102, 460 + h + i * 18);
         i++;
+        current_line++;
     }
     if (strlen(inputMessage) <= MAX_CHAR) {
-        load_Texture_Text(inputMessage, test4[i], font2, inputMessage_Color);
-        // test4[i]->tWidth = 300;
-        // test4->tHeight = 300;
-        Render(test4[i], 102, 460 + h + i * 18);
-    }
-    SDL_RenderPresent(renderer);        
+        strcpy(MessageLine[current_line], inputMessage);
+        current_line++;
+    }     
 }
 
 
@@ -264,74 +297,45 @@ int InGame_Screen(int selection){
     }else if(selection == HOST_GAME){
         ResetRender();
         GameTexture *test = (GameTexture *)malloc(sizeof(GameTexture));
-        SDL_Color textColor = {255, 255, 0};
         TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
         char *text = "This is Join Game screen!";
-        load_Texture_Text(text, test, font, textColor);
+        load_Texture_Text(text, test, font, yellow_color);
         Render(test, 55, 55);
         SDL_RenderPresent(renderer);
     }else if(selection == JOIN_GAME){
         ResetRender();
         GameTexture *test2 = (GameTexture *)malloc(sizeof(GameTexture));
-        SDL_Color textColor2 = {255, 255, 0};
         TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
         char *text = "This is Host Game screen!";
-        load_Texture_Text(text, test2, font, textColor2);
+        load_Texture_Text(text, test2, font, yellow_color);
         Render(test2, 55, 55);
-        GameTexture *test3 = (GameTexture *)malloc(sizeof(GameTexture));
-        test3->tWidth = 480;
-        test3->tHeight = 360;
-        load_Texture_IMG("resource/chatboxPic.jpg", test3);
-        Render(test3, 10, 400);
-        char *trungvt = "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ";
-        char *manhml = "manhml: Hello there:))))I'm a seer";
-        char *na = "You: Don't trust trumpvt:)";
-        ChatBoxText(trungvt, 0);
-        ChatBoxText(manhml, 18 * 2);
-        ChatBoxText(na, 18 * 3);
-    //     GameTexture **test4 = (GameTexture **)malloc(sizeof(GameTexture*) * 10);
-    //     for (int i = 0; i < 10; i++) {
-    //         test4[i] = (GameTexture*)malloc(sizeof(GameTexture));
-    //     }
-    //     char *inputMessage = (char*)calloc(200, sizeof(char));
-    //     memset(inputMessage, '\0', 200);
-    //     strcpy(inputMessage, "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ");
-    //     inputMessage[strlen(inputMessage)] = '\0';
-    //     printf("%s\n", inputMessage);
-    //     char *cutMessage = calloc(MAX_CHAR + 1, sizeof(char));
-    //     SDL_Color inputMessage_Color = {255, 255, 255};
-    //     TTF_Font *font2 = TTF_OpenFont("resource/times.ttf", 15);
-    //     int i = 0;
+        ChatBoxUI();
         
-    //     while (strlen(inputMessage) > MAX_CHAR)
-    //     {
-    //         // printf("1");
-    //         memset(cutMessage, '\0', sizeof(char));
-    //         strncpy(cutMessage, inputMessage, MAX_CHAR);
-    //         cutMessage[strlen(cutMessage)] = '\0';
-    //         printf("%s\n", cutMessage);
-    //         // memcpy(inputMessage, inputMessage + 20, strlen(inputMessage) - 20);
-    //         // inputMessage[strlen(inputMessage) - 20] = '\0';
-    //         for (int i = 0; i < strlen(inputMessage) - MAX_CHAR; i++) {
-    //             inputMessage[i] = inputMessage[i + MAX_CHAR];
-    //             // printf("%c", inputMessage[i]);
-    //         }
-    //         inputMessage[strlen(inputMessage) - MAX_CHAR] = '\0';
-    //         printf("%s\n", inputMessage);
-    //         load_Texture_Text(cutMessage, test4[i], font2, inputMessage_Color);
-    //         test4[i]->tWidth = 300;
-    //         // test4->tHeight = 300;
-    //         Render(test4[i], 102, 460 + i * 18);
-    //         i++;
-    //     }
-    //     if (strlen(inputMessage) <= MAX_CHAR) {
-    //         load_Texture_Text(inputMessage, test4[i], font2, inputMessage_Color);
-    //         // test4[i]->tWidth = 300;
-    //         // test4->tHeight = 300;
-    //         Render(test4[i], 102, 460 + i * 18);
-    //     }
-    //     SDL_RenderPresent(renderer);        
+        // char *trungvt = "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ";
+        // char *manhml = "manhml: Hello there:))))I'm a seer";
+        // char *na = "You: Don't trust trumpvt:)";
+        // current_rect = ChatBoxText(trungvt, messLine_rect, current_rect);
+        // current_rect = ChatBoxText(manhml, messLine_rect, current_rect);
+        // current_rect = ChatBoxText(na, messLine_rect, current_rect);       
     }
+    int i;
+    SDL_Rect *messLine_rect = calloc(14, sizeof(SDL_Rect));
+    MessageLine = calloc(1024 , sizeof(char *));
+    for(i = 0; i < 1024; i++){
+        MessageLine[i] = calloc(MAX_CHAR + 1, sizeof(char));
+    }
+    for(i = 0; i < 14; i++){
+        messLine_rect[i].h = 22;
+        messLine_rect[i].w = 340;
+        messLine_rect[i].x = 20;
+        messLine_rect[i].y = 420 + i * 20;
+    //SDL_RenderDrawRect(renderer, &messLine_rect[i]);
+    }
+    char *textMessage = calloc(100, sizeof(char));
+    GameTexture *inputTexture = calloc(1, sizeof(GameTexture));
+    TTF_Font *font = TTF_OpenFont("resource/times.ttf", 15);
+    memset(textMessage, '\0', sizeof(char));
+    int tmp;
     while(1){
         while(SDL_PollEvent(&game_e)){
             switch (game_e.type){
@@ -343,18 +347,123 @@ int InGame_Screen(int selection){
                 if(game_e.key.keysym.sym == SDLK_ESCAPE){
                     return ESC;
                 }
+                else if(game_e.key.keysym.sym == SDLK_BACKSPACE){
+                    textMessage[strlen(textMessage) - 1] = '\0';
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(inputMessage_rect);
+                    SDL_RenderPresent(renderer);
+                }else if((game_e.key.keysym.sym == SDLK_KP_ENTER || game_e.key.keysym.sym == SDLK_RETURN) && strlen(textMessage) != 0){
+                    splitText(textMessage);
+                    tmp = current_line;
+                    printf("%s\n", textMessage);
+                    memset(textMessage, '\0', sizeof(char));
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(showMessage_rect);
+                    for(i = 0 ; i < 13; i++){
+                        if(current_line >= i + 1){
+                            GameTexture *showMessage = calloc(1, sizeof(GameTexture));
+                            load_Texture_Text(MessageLine[current_line - i - 1], showMessage, font, white_color);
+                            if(showMessage->tWidth > showMessage_rect.w - 20){
+                                showMessage->tWidth = showMessage_rect.w - 20;
+                            }
+                            Render(showMessage, messLine_rect[13 - i].x, messLine_rect[13 - i].y);
+                        }
+                    }
+                    ClearRenderRect(inputMessage_rect);
+                    SDL_RenderPresent(renderer);
+                }
+                break;
+            case SDL_TEXTINPUT:
+                if(strlen(textMessage) < 100){
+                    strcat(textMessage, game_e.text.text);
+                }
+                break;
+            case SDL_MOUSEMOTION:
+                if(check_mouse_pos(send_Button) == 1){
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    ClearRenderRect(send_Button);
+                    load_Texture_Text(" Send", sendButton, font, black_color);
+                    Render(sendButton, 315, 731);
+                    SDL_RenderPresent(renderer);
+                }else{
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(send_Button);
+                    load_Texture_Text(" Send", sendButton, font, white_color);
+                    Render(sendButton, 315, 731);
+                    SDL_RenderPresent(renderer);
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                if(check_mouse_pos(send_Button) == 1 && strlen(textMessage) != 0){
+                    splitText(textMessage);
+                    tmp = current_line;
+                    memset(textMessage, '\0', sizeof(char));
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(showMessage_rect);
+                    for(i = 0 ; i < 13; i++){
+                        if(current_line >= i + 1){
+                            GameTexture *showMessage = calloc(1, sizeof(GameTexture));
+                            load_Texture_Text(MessageLine[current_line - i - 1], showMessage, font, white_color);
+                            if(showMessage->tWidth > showMessage_rect.w - 20){
+                                showMessage->tWidth = showMessage_rect.w - 20;
+                            }
+                            Render(showMessage, messLine_rect[13 - i].x, messLine_rect[13 - i].y);
+                        }else{
+                            break;
+                        }
+                    }
+                    ClearRenderRect(inputMessage_rect);
+                    SDL_RenderPresent(renderer);
+                }
+                break;
+            case SDL_MOUSEWHEEL:
+                if(check_mouse_pos(chatBox_rect) == 1){
+                    if(game_e.wheel.y > 0 && tmp >= 14){
+                        tmp--;
+                        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                        ClearRenderRect(showMessage_rect);
+                        for(i = 0 ; i < 13; i++){
+                            if(tmp >= i + 1){
+                                GameTexture *showMessage = calloc(1, sizeof(GameTexture));
+                                load_Texture_Text(MessageLine[tmp - i - 1], showMessage, font, white_color);
+                                Render(showMessage, messLine_rect[13 - i].x, messLine_rect[13 - i].y);
+                            }else{
+                                break;
+                            }
+                        }
+                    }else if(game_e.wheel.y < 0 && tmp < current_line){
+                        tmp++;
+                        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                        ClearRenderRect(showMessage_rect);
+                        for(i = 0 ; i < 13; i++){
+                            if(tmp >= i + 1){
+                                GameTexture *showMessage = calloc(1, sizeof(GameTexture));
+                                load_Texture_Text(MessageLine[tmp - i - 1], showMessage, font, white_color);
+                                Render(showMessage, messLine_rect[13 - i].x, messLine_rect[13 - i].y);
+                            }else{
+                                break;
+                            }
+                        }
+                    }
+                }
                 break;
             default:
+                if(strlen(textMessage) != 0){
+                    load_Texture_Text(textMessage, inputTexture, font, white_color);
+                    if(inputTexture->tWidth > inputMessage_rect.w - 12){
+                        inputTexture->tWidth = inputMessage_rect.w - 12;
+                    }
+                    Render(inputTexture, 20, 729);
+                    SDL_RenderPresent(renderer);
+                }
                 break;
             }
-
         }
     }
     return 0;
 }
 
 int main(int argc, char** argv) {
-    int quit = 0;
     if(CreateWindow() == 0){
         exit(ERROR);
     }
