@@ -14,6 +14,10 @@
 #define MAX_CHAR 55
 #define ERROR 0
 #define SUCCEED 1
+char *text;
+char *composition;
+Sint32 cursor;
+Sint32 selection_len;
 
 typedef struct GameTexture{
     SDL_Texture *texture;
@@ -287,7 +291,6 @@ void splitText(char *inputText) {
     }     
 }
 
-
 int InGame_Screen(int selection){
     ResetRender();
     SDL_Event game_e;
@@ -309,14 +312,7 @@ int InGame_Screen(int selection){
         char *text = "This is Host Game screen!";
         load_Texture_Text(text, test2, font, yellow_color);
         Render(test2, 55, 55);
-        ChatBoxUI();
-        
-        // char *trungvt = "trungvt: Hello everyone!! I'm not a wolf:) Please don't vote me :( ";
-        // char *manhml = "manhml: Hello there:))))I'm a seer";
-        // char *na = "You: Don't trust trumpvt:)";
-        // current_rect = ChatBoxText(trungvt, messLine_rect, current_rect);
-        // current_rect = ChatBoxText(manhml, messLine_rect, current_rect);
-        // current_rect = ChatBoxText(na, messLine_rect, current_rect);       
+        ChatBoxUI(); 
     }
     int i;
     SDL_Rect *messLine_rect = calloc(14, sizeof(SDL_Rect));
@@ -329,7 +325,6 @@ int InGame_Screen(int selection){
         messLine_rect[i].w = 340;
         messLine_rect[i].x = 20;
         messLine_rect[i].y = 420 + i * 20;
-    //SDL_RenderDrawRect(renderer, &messLine_rect[i]);
     }
     char *textMessage = calloc(100, sizeof(char));
     GameTexture *inputTexture = calloc(1, sizeof(GameTexture));
@@ -377,6 +372,11 @@ int InGame_Screen(int selection){
                 if(strlen(textMessage) < 100){
                     strcat(textMessage, game_e.text.text);
                 }
+                break;
+            case SDL_TEXTEDITING:
+                composition = game_e.edit.text;
+                cursor = game_e.edit.start;
+                selection_len = game_e.edit.length;
                 break;
             case SDL_MOUSEMOTION:
                 if(check_mouse_pos(send_Button) == 1){

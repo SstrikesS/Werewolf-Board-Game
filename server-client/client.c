@@ -1,4 +1,3 @@
-
 #include <winsock2.h>
 #include <unistd.h>
 #include "packet.h"
@@ -61,7 +60,7 @@ char *Login_To_Server(){
 	return name_client;
 }
 
-int main(){
+void client_process(){
 	char *name_client = calloc(MAX_OF_NAME, sizeof(char));
 	char *guess_client = calloc( MAX_OF_NAME, sizeof(char));
     int length = sizeof(server_addr);
@@ -84,7 +83,7 @@ int main(){
 		while(1){
 			memset(message, '\0', MAX_OF_CHAR_MESSAGE);
 			ZeroMemory(pack , sizeof(pack));
-			printf("%s : ", name_client);
+			//printf("%s : ", name_client);
 			fflush(stdin);
 			scanf("%[^\n]%*c", pack->message);
 			if(strlen(pack->message) == 0){
@@ -102,5 +101,8 @@ int main(){
 		}
 	}
     closeClient();
+}
+int main(){
+	client_process();
 	return 0;
 }
