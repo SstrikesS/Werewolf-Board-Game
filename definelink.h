@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define MAX_OF_ROOM 10
 #define MAX_OF_CHAR_MESSAGE 1024 //max characters of that message can contain
 #define MAX_OF_NAME 20 //max characters of name
 #define ERROR_RETURN -1 //return with error
@@ -16,12 +17,3 @@
 //     WITCH = 4,
 //     PROTECTOR = 5,
 // };
-// typedef struct Room{
-//     int players;
-//     int wolfs;
-//     int villages;
-//     int seer;
-//     int hunter;
-//     int witch;
-//     int protector;
-// }Room;

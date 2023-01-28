@@ -1,3 +1,11 @@
 {
-    "C_Cpp.errorSquiggles": "enabled"
+    "C_Cpp.errorSquiggles": "enabled",
+    "files.associations": {
+        "*.php": "html",
+        "player.h": "c",
+        "sdl_ttf.h": "c",
+        "stdlib.h": "c",
+        "sdl_render.h": "c",
+        "sdl_rect.h": "c"
+    }
 }

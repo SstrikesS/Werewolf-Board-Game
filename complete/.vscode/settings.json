@@ -1,0 +1,12 @@
+{
+    "C_Cpp.errorSquiggles": "enabled",
+    "files.associations": {
+        "*.php": "html",
+        "sdl_rect.h": "c",
+        "sdl_render.h": "c",
+        "string.h": "c",
+        "sdl_image.h": "c",
+        "globaldefine.h": "c",
+        "sdl_ttf.h": "c"
+    }
+}

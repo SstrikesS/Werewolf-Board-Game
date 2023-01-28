@@ -5,6 +5,6 @@
 
 int setupClient();
 void closeClient();
-void Listen_To_Server(char * buffer);
-char *Login_To_Server();
+void Listen_To_Server();
+void Login_To_Server(char *player_name);
 void client_process();

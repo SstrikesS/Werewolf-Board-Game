@@ -11,6 +11,8 @@ enum pack_type{
     VOTE = 7, // packet mang thong tin tat ca loai vote cua nguoi choi(vote treo co , vote skip time, ...)
     PLAYER_TARGET = 8, // chua thong tin phayer target (vd soi taget trungvt, protector bao ve trungvt, seer doan trungvt)
     PLAYER_DEAD = 9, // cac player dead
+    SUCCEED_PACK = 10, // tra lai thong bao thanh cong
+    ERROR_PACK = 11// tra lai thong bao loi
 };
 
 typedef struct Packet{
@@ -19,14 +21,18 @@ typedef struct Packet{
 }Packet;
 
 
-int GetPackType(char *message);
+enum pack_type GetMessageType(char *message);
 
-char *PacketParse(Packet *pack);
+char **GetToken(char *message, int token_size);
 
-Packet *MessageParse(char *message);
+char *GetMessage_Login(char *client_name);
 
-char *PacketParse_PubMess(Packet *pack, char *client_name);
+char *GetMessage_PubMess(char *message, char *client_name);
 
-Packet *MessageParse_PubMess(char *message, char *client_name);
+char *GetMessage_SUCCESS(char *message);
 
-void PackCopy(Packet *pack1, Packet *pack2);
+char *GetMessage_ERROR(char *message);
+
+
+
+char *RoomPacktoString(enum pack_type type, char *roomName, char *max_player);

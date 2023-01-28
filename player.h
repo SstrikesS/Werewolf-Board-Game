@@ -1,14 +1,22 @@
 #include <winsock2.h>
 #include "definelink.h"
 
-typedef struct Player{
-	struct sockaddr_in player_client;
-	char name[MAX_OF_NAME];
+typedef struct Client{
+	struct sockaddr_in client;
+	char *name;
 	int id;
-}Player;
+	char *room_id;
+	int host;
+}Client;
+
+typedef struct Room{
+    char *room_id;
+    int max_client;
+	int client_curr;
+}Room;
 
 int findPlayer(void *tmp1, void *tmp2);
 
-Player *createPlayer(struct sockaddr_in player_client, char *name, int id);
+Client *createPlayer(struct sockaddr_in client, char *name, int id);
 
-void PlayerCopy(Player *tmp1, Player *tmp2);
+void PlayerCopy(Client *tmp1, Client *tmp2);

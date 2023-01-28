@@ -161,7 +161,7 @@ void close_win(){ //Close the game
     IMG_Quit();
     SDL_Quit();
 }
-int InGame_Screen(int selection);
+void InGame_Screen();
 void JoinGame();
 void HostGame();
 void Main_Screen(){  
@@ -192,8 +192,6 @@ void Main_Screen(){
     SDL_RenderDrawRect(renderer, &player_name_rect);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     ClearRenderRect(player_name_rect);
-    player_name = calloc(20, sizeof(char));
-    strcpy(player_name, "Player1");
     //render ten player
     GameTexture *player_name_texture = calloc(1, sizeof(GameTexture));
     TTF_Font *font2 = TTF_OpenFont("resource/arial.ttf", 42);
@@ -245,11 +243,14 @@ void Main_Screen(){
                 }
                 break;
             case SDL_MOUSEBUTTONDOWN://khi chuot click
-                if(check_mouse_pos(button[0]) == 1){
-                    JoinGame();
-                }else if(check_mouse_pos(button[1]) == 1){
-                    HostGame();
-                }else if(check_mouse_pos(button[2]) == 1){
+                if(strlen(player_name) != 0){
+                    if(check_mouse_pos(button[0]) == 1){
+                        JoinGame();
+                    }else if(check_mouse_pos(button[1]) == 1){
+                        HostGame();
+                    }
+                }
+                if(check_mouse_pos(button[2]) == 1){
                     close_win();
                     exit(0);
                 }
@@ -354,6 +355,9 @@ void JoinGame(){
                 }
                 break;
             case SDL_MOUSEBUTTONDOWN:
+                if(check_mouse_pos(button[3]) == 1){
+                    Main_Screen();
+                }
                 break;
             default:
                 break;
@@ -363,33 +367,175 @@ void JoinGame(){
 }
 
 void HostGame(){
-    // SDL_Event hostG_e;
-    // Packet *pack = calloc(1, sizeof(Packet));
-    // int buffer_size;
-    // int length = (int)sizeof(server_addr);
-    // char *message = calloc(MAX_OF_CHAR_MESSAGE, sizeof(char));
-    // char *buffer = calloc(MAX_OF_CHAR_MESSAGE, sizeof(char));
-    // if(setupClient() == SUCCEED_RETURN){
-    //     pthread_t tid;
-    //     strcpy(pack->message, player_name);
-    //     pack->type = LOGIN_PACK;
-    //     message = PacketParse(pack);
-    //     sendto(sockfd, message, strlen(message), 0, (SOCKADDR *)&server_addr, length);
-    //     pthread_create(&tid, NULL, (void *(*)(void *))Listen_To_Server, buffer);
-    //     printf("Server return: %s\n", buffer);
-    // }
-    // while(1){
-    //     while(SDL_PollEvent(&hostG_e)){
-    //         switch (hostG_e.type){
-    //         case SDL_QUIT:
-    //             close_win();
-    //             exit(0);
-    //             break;
-    //         default:
-    //             break;
-    //         }
-    //     }
-    // }
+    Login_To_Server(player_name);
+    ResetRender();
+    SDL_Event hostG_e;
+    TTF_Font *font = TTF_OpenFont("resource/font.ttf", 40);
+    TTF_Font *font2 = TTF_OpenFont("resource/arial.ttf", 35);
+    TTF_Font *font3 = TTF_OpenFont("resource/arial.ttf", 60);
+    SDL_Rect roomBox = CreateRect(350, 230, 400, 330);
+    SDL_Rect textBox = CreateRect(380, 300, 340, 60);
+    SDL_Rect button;
+    SDL_Rect button_num[2];
+    SDL_Rect numRect = CreateRect(530, 440, 50, 50);
+    GameTexture *maxTexture = calloc(1, sizeof(GameTexture)); 
+    GameTexture *numTexture = calloc(1, sizeof(GameTexture));
+    GameTexture *inTexture = calloc(1, sizeof(GameTexture));
+    GameTexture *deTexture = calloc(1, sizeof(GameTexture));
+    GameTexture *boxTexture = calloc(1, sizeof(GameTexture));
+    GameTexture *buttonTexture = calloc(1, sizeof(GameTexture));
+    GameTexture *inputTexture = calloc(1, sizeof(GameTexture));
+    char *boxText = calloc(20, sizeof(char));
+    char *button_text = calloc(5, sizeof(char));
+    char *roomName = calloc(20, sizeof(char));
+    char *numText = calloc(5, sizeof(char));
+    char *maxText = calloc(20, sizeof(char));
+    
+    strcat(roomName, player_name);
+    strcat(roomName, "'s Game");
+    roomName[strlen(roomName)] = '\0';
+    strcpy(boxText, "Room name");
+    boxText[strlen(boxText)] = '\0';
+    strcpy(button_text, "OK");
+    button_text[strlen(button_text)] = '\0';
+    char *inText = ">";
+    char *deText = "<";
+    strcpy(numText, "8");
+    numText[strlen(numText)] = '\0';
+    strcpy(maxText, "Max players");
+    maxText[strlen(maxText)] = '\0';
+
+    load_Texture_Text(boxText, boxTexture, font, red_color);
+    Render(boxTexture, 460, 250);
+
+    load_Texture_Text(button_text, buttonTexture, font, red_color);
+    button = Render(buttonTexture, 530, 510);
+
+    load_Texture_Text(roomName, inputTexture, font2, white_color);
+    Render(inputTexture, 390, 310);
+
+    load_Texture_Text(inText, inTexture, font3, red_color);
+    button_num[0] = Render(inTexture, 680, 430);
+
+    load_Texture_Text(deText, deTexture, font3, red_color);
+    button_num[1] = Render(deTexture, 390, 430);
+
+    load_Texture_Text(numText, numTexture, font, white_color);
+    Render(numTexture, 535, 450);
+
+    load_Texture_Text(maxText, maxTexture, font, red_color);
+    Render(maxTexture, 440, 390);
+
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_RenderDrawRect(renderer, &roomBox);
+    SDL_RenderDrawRect(renderer, &textBox);
+
+    SDL_RenderPresent(renderer);
+    while(1){
+        while(SDL_PollEvent(&hostG_e)){
+            switch (hostG_e.type){
+            case SDL_QUIT:
+                close_win();
+                exit(0);
+                break;
+            case SDL_MOUSEMOTION:
+                if(check_mouse_pos(button) == 1){
+                    load_Texture_Text(button_text, buttonTexture, font, yellow_color);
+                    Render(buttonTexture, 530, 510);
+                    SDL_RenderPresent(renderer);
+                }else{
+                    load_Texture_Text(button_text, buttonTexture, font, red_color);
+                    Render(buttonTexture, 530, 510);
+                    SDL_RenderPresent(renderer);
+                }
+                if(check_mouse_pos(button_num[0]) == 1){
+                    load_Texture_Text(inText, inTexture, font3, yellow_color);
+                    Render(inTexture, 680, 430);
+                    SDL_RenderPresent(renderer);
+                }else{
+                    load_Texture_Text(inText, inTexture, font3, red_color);
+                    Render(inTexture, 680, 430);
+                    SDL_RenderPresent(renderer);
+                }
+                if(check_mouse_pos(button_num[1]) == 1){
+                    load_Texture_Text(deText, deTexture, font3, yellow_color);
+                    Render(deTexture, 390, 430);
+                    SDL_RenderPresent(renderer);
+                }else{
+                    load_Texture_Text(deText, deTexture, font3, red_color);
+                    Render(deTexture, 390, 430);
+                    SDL_RenderPresent(renderer);
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                if(check_mouse_pos(button) == 1){
+                    if(strlen(roomName) != 0){
+                        InGame_Screen();
+                    }
+                }
+                if(check_mouse_pos(button_num[0]) == 1){
+                    int tmp = atoi(numText);
+                    if(tmp < 12){
+                    tmp++;
+                        memset(numText, '\0', 5);
+                        sprintf(numText, "%d", tmp);
+                        SDL_SetRenderDrawColor(renderer ,0, 0, 0, 255);
+                        ClearRenderRect(numRect);
+                        load_Texture_Text(numText, numTexture, font, white_color);
+                        Render(numTexture, 535, 450);
+                        SDL_RenderPresent(renderer);
+                    }
+                }else if(check_mouse_pos(button_num[1]) == 1){
+                    int tmp = atoi(numText);
+                    if(tmp > 8){
+                        tmp--;
+                        memset(numText, '\0', 5);
+                        sprintf(numText, "%d", tmp);
+                        SDL_SetRenderDrawColor(renderer ,0, 0, 0, 255);
+                        ClearRenderRect(numRect);
+                        load_Texture_Text(numText, numTexture, font, white_color);
+                        Render(numTexture, 535, 450);
+                        SDL_RenderPresent(renderer);
+                    }
+                }
+                break;
+            case SDL_TEXTINPUT:
+                if(strlen(roomName) < 17){
+                    strcat(roomName, hostG_e.text.text);
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(textBox);
+                    if(strlen(roomName) != 0){
+                        load_Texture_Text(roomName, inputTexture, font2, white_color);
+                        Render(inputTexture, 390, 310);
+                    }
+                    SDL_RenderPresent(renderer);
+                }
+                break;
+            case SDL_KEYDOWN:
+                if(hostG_e.key.keysym.sym == SDLK_BACKSPACE){
+                    roomName[strlen(roomName) - 1] = '\0';
+                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                    ClearRenderRect(textBox);
+                    if(strlen(roomName) != 0){
+                        load_Texture_Text(roomName, inputTexture, font2, white_color);
+                        Render(inputTexture, 390, 310);
+                    }
+                    SDL_RenderPresent(renderer);
+                }
+                if(hostG_e.key.keysym.sym == SDLK_RETURN || hostG_e.key.keysym.sym == SDLK_KP_ENTER){
+                    if(strlen(roomName) != 0){
+                        InGame_Screen();
+                    }
+                }
+                if(hostG_e.key.keysym.sym == SDLK_ESCAPE){
+                    Main_Screen();
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
 }
 void ChatBoxUI(){
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -440,28 +586,11 @@ void splitText(char *inputText) {
     }     
 }
 
-int InGame_Screen(int selection){
+void InGame_Screen(){
     ResetRender();
+    ChatBoxUI();
     SDL_Event game_e;
-    if(selection == EXIT_GAME){
-        close_win();
-        exit(0);
-    }else if(selection == HOST_GAME){
-        GameTexture *test = (GameTexture *)malloc(sizeof(GameTexture));
-        TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
-        char *text = "This is Join Game screen!";
-        load_Texture_Text(text, test, font, yellow_color);
-        Render(test, 55, 55);
-        ChatBoxUI();
-    }else if(selection == JOIN_GAME){
-        GameTexture *test2 = (GameTexture *)malloc(sizeof(GameTexture));
-        TTF_Font *font = TTF_OpenFont("resource/font.ttf", 50);
-        char *text = "This is Host Game screen!";
-        load_Texture_Text(text, test2, font, yellow_color);
-        Render(test2, 55, 55);
-        ChatBoxUI(); 
-    }
-    int i;
+    int i, tmp;
     SDL_Rect *messLine_rect = calloc(14, sizeof(SDL_Rect));
     MessageLine = calloc(1024 , sizeof(char *));
     for(i = 0; i < 1024; i++){
@@ -474,7 +603,6 @@ int InGame_Screen(int selection){
     GameTexture *inputTexture = calloc(1, sizeof(GameTexture));
     TTF_Font *font = TTF_OpenFont("resource/times.ttf", 15);
     memset(textMessage, '\0', sizeof(char));
-    int tmp;
     while(1){
         while(SDL_PollEvent(&game_e)){
             switch (game_e.type){
@@ -484,12 +612,19 @@ int InGame_Screen(int selection){
                 break;
             case SDL_KEYDOWN:
                 if(game_e.key.keysym.sym == SDLK_ESCAPE){
-                    return ESC;
+                    Main_Screen();
                 }
                 else if(game_e.key.keysym.sym == SDLK_BACKSPACE){
                     textMessage[strlen(textMessage) - 1] = '\0';
                     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                     ClearRenderRect(inputMessage_rect);
+                    if(strlen(textMessage) != 0){
+                        load_Texture_Text(textMessage, inputTexture, font, white_color);
+                        if(inputTexture->tWidth > inputMessage_rect.w - 12){
+                            inputTexture->tWidth = inputMessage_rect.w - 12;
+                        }
+                        Render(inputTexture, 20, 729);
+                    }
                     SDL_RenderPresent(renderer);
                 }else if((game_e.key.keysym.sym == SDLK_KP_ENTER || game_e.key.keysym.sym == SDLK_RETURN) && strlen(textMessage) != 0){
                     splitText(textMessage);
@@ -522,8 +657,8 @@ int InGame_Screen(int selection){
                         inputTexture->tWidth = inputMessage_rect.w - 12;
                     }
                     Render(inputTexture, 20, 729);
-                    SDL_RenderPresent(renderer);
                 }
+                SDL_RenderPresent(renderer);
                 break;
             case SDL_MOUSEMOTION:
                 if(check_mouse_pos(send_Button) == 1){
@@ -603,14 +738,14 @@ int InGame_Screen(int selection){
             }
         }
     }
-    return 0;
 }
 
 int main(int argc, char** argv) {
     if(CreateWindowGame() == 0){
         exit(ERROR);
     }
-
+    player_name = calloc(20, sizeof(char));
+    strcpy(player_name, "Player1");
     Main_Screen();
     //int selection = 0;
     // do{
