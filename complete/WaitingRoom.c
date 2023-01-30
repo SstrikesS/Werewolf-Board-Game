@@ -126,13 +126,22 @@ void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, Cur
 
 void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currUser, SettingRow *Srow){
     int i;
+    char *img_link = calloc(100 ,sizeof(char));
+    char *num = calloc(4, sizeof(char));
     SDL_FillRect(wSurface, &listBox, SDL_MapRGB(wSurface->format, 0, 0, 0));
-    SDL_Surface *sur = IMG_Load("bin/img/red.jpg");
+    SDL_Surface *sur;
     TTF_Font * arialfont_10 = TTF_OpenFont("bin/font/arial.ttf", 10);
     TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 20);
     SDL_Color red_color = {255, 0, 0};
     for(i = 0; i < 12; i++){
         if(pBox[i].player_id != -1){
+            memset(img_link, 0 ,sizeof(*img_link));
+            memset(num, 0 ,sizeof(*num));
+            strcat(img_link, "bin/img/pos");
+            sprintf(num, "%d", i + 1);
+            strcat(img_link, num);
+            strcat(img_link, ".jpg");
+            sur = IMG_Load(img_link);
             //printf("%s %d\n", pBox[i].playername, pBox[i].player_id);
             //printf("rect = %d %d %d %d\n", pBox[i].pos.x, pBox[i].pos.y, pBox[i].pos.w, pBox[i].pos.h);
             SDL_FillRect(wSurface, &pBox[i].pos, SDL_MapRGB(wSurface->format, 255, 255, 255));
@@ -404,7 +413,11 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
             switch (gEvent.type){
             case SDL_QUIT:
                 j = pthread_cancel(tid);
-                close(sockfd);
+            
+                memset(SendBuffer, 0, sizeof(*SendBuffer));
+                SendBuffer = GetMess(token, 0, EXIT_PACK);
+                sendToServer(sockfd, server_addr, SendBuffer);
+
                 SDL_FreeSurface(wSurface);
                 SDL_DestroyWindow(window);
                 SDL_DestroyRenderer(renderer);

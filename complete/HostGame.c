@@ -80,8 +80,8 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
             case SDL_QUIT:
                 memset(buffer, 0, sizeof(*buffer));
                 buffer = GetMess(token, 0, EXIT_PACK);
-                printf("buffer = %s\n", buffer);
                 sendToServer(sockfd, server_addr, buffer);
+
                 SDL_DestroyWindow(window);
                 SDL_DestroyRenderer(renderer);
                 window = NULL;
@@ -166,7 +166,6 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                 if(check_mouse_pos(Backbutton) == 1){
                     memset(buffer, 0, sizeof(*buffer));
                     buffer = GetMess(token, 0, EXIT_PACK);
-                    printf("buffer = %s\n", buffer);
                     sendToServer(sockfd, server_addr, buffer);
 
                     free(num);
