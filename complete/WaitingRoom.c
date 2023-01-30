@@ -312,6 +312,11 @@ void *handleMess(void *argument){
             for(i = 0; i < 2; i++){
                 memset(token[i], 0 , sizeof(*token[i]));
             }
+        }else if(arg->type == START_GAME){
+            isStart = 1;
+            token = GetToken(arg->buffer, 2);
+            arg->currUser->role = (enum Role)atoi(token[1]);
+            printf("Your role = %d\n", (int)arg->currUser->role);
         }
     }
     return NULL;
@@ -457,7 +462,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                         token = GetToken(arg->buffer, 2);
                         if(arg->type == SUCCEED_RETURN){
                             printf("[+]Server :%s\n", token[1]);
-                            isStart = 1;
                         }
                         else if(arg->type == ERROR_RETURN){
                             printf("[-]Server :%s\n", token[1]);

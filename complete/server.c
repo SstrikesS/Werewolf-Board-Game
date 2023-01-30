@@ -17,6 +17,7 @@ typedef struct Room{
     char *room_id;
     int *player_id;
     int max_client;
+    enum Role *playerRole;
 	int client_count;
     int isStart;
 }Room;
@@ -197,6 +198,48 @@ void GetRoom(int index){
     free(token);
 }
 
+void shuffle(void *array, size_t n, size_t size) {
+    char tmp[size];
+    char *arr = array;
+    size_t stride = size * sizeof(char);
+
+    if (n > 1) {
+        size_t i;
+        for (i = 0; i < n - 1; ++i) {
+            size_t rnd = (size_t) rand();
+            size_t j = i + rnd / (RAND_MAX / (n - i) + 1);
+
+            memcpy(tmp, arr + j * stride, size);
+            memcpy(arr + j * stride, arr + i * stride, size);
+            memcpy(arr + i * stride, tmp, size);
+        }
+    }
+}
+
+enum Role *playerRoles(int count) {
+    enum Role *player2;
+    player2 = calloc(count, sizeof(enum Role));
+    if (count == 8) {
+        enum Role player1[] = { VILLAGE, VILLAGE, VILLAGE, VILLAGE, HUNTER, SEER, PROTECTER, WEREWOLF };
+        player2 = player1;
+        shuffle(player2, count, sizeof(player2[0]));
+    }
+
+    else if (count == 12) {
+        enum Role player1[] = { VILLAGE, VILLAGE, VILLAGE, VILLAGE, VILLAGE, HUNTER, SEER, PROTECTER, WITCH, WEREWOLF, WEREWOLF, WEREWOLF };
+        player2 = player1;
+        shuffle(player2, count, sizeof(player2[0]));
+    }
+
+    for (int i = 0; i < 12; i++) {
+        printf("%d,", player2[i]);
+    }
+
+    printf("\n");
+
+    return player2;
+}
+
 void *clientHandle(void *argument){
     int i, j = -1;
     int *list = calloc(MAX_ROOM, sizeof(int));
@@ -341,6 +384,17 @@ void *clientHandle(void *argument){
             buffer = GetMess(token, 1, ERROR_RETURN);
         }
         sendToClient(sockfd, client_list[arg->index].client, buffer);
+        client_list[arg->index].room->playerRole = calloc(client_list[arg->index].room->max_client, sizeof(enum Role));
+        client_list[arg->index].room->playerRole = playerRoles(client_list[arg->index].room->max_client);
+        // memset(token[0], 0 ,sizeof(*token[0]));
+        // memset(buffer, 0, sizeof(buffer));
+        for(i = 0; i < client_list[arg->index].room->max_client; i++){
+            memset(token[0], 0 ,sizeof(*token[0]));
+            memset(buffer, 0, sizeof(*buffer));
+            sprintf(token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
+            buffer = GetMess(token, 1, START_GAME);
+            sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i]].client, buffer);
+        }
         //printf("%s\n", buffer);
         break;
     default:

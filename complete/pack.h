@@ -16,11 +16,22 @@ enum pack_type{
     START_GAME = 13
 };
 
+enum Role{ // cac Role
+    WEREWOLF = 1,
+    WITCH = 2,
+    PROTECTER = 3,
+    SEER = 4,
+    HUNTER = 5,
+    VILLAGE = 6,
+    SPECTATOR = 7 // khi chet se tro thanh role nay
+};
+
 typedef struct _CurrentPlayer{
     char *name;
     int id;
     char *room;
     int isHost;
+    enum Role role;
 }CurrentPlayer;
 
 enum pack_type GetType(char *message);
