@@ -314,7 +314,7 @@ void *clientHandle(void *argument){
             for(i = 0; i < 3; i++){
                 memset(token[i], 0, sizeof(*token[i]));
             }
-            printf("[+]%s is hosting room '%s'!\n", client_list[arg->index].name, client_list[arg->index].room->room_id);
+            printf("[+]%s is hosting room '%s' max player is '%d'!\n", client_list[arg->index].name, client_list[arg->index].room->room_id, client_list[arg->index].room->max_client);
             strcpy(token[0], "OK!");
             buffer = GetMess(token, 1, SUCCEED_PACK);
             sendToClient(sockfd, client_list[arg->index].client, buffer);
@@ -378,10 +378,10 @@ void *clientHandle(void *argument){
     case START_GAME:
         if(client_list[arg->index].room->client_count == client_list[arg->index].room->max_client){
             strcpy(token[0], "OK!");
-            buffer = GetMess(token, 1, SUCCEED_RETURN);
+            buffer = GetMess(token, 1, SUCCEED_PACK);
         }else{
             strcpy(token[0], "Not enough players to start!");
-            buffer = GetMess(token, 1, ERROR_RETURN);
+            buffer = GetMess(token, 1, ERROR_PACK);
         }
         sendToClient(sockfd, client_list[arg->index].client, buffer);
         client_list[arg->index].room->playerRole = calloc(client_list[arg->index].room->max_client, sizeof(enum Role));

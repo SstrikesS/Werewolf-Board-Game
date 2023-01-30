@@ -458,12 +458,13 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                     memset(SendBuffer, 0, sizeof(*SendBuffer));
                     SendBuffer = GetMess(token , 0, START_GAME);
                     sendToServer(sockfd, server_addr, SendBuffer);
+
                     while(strlen(arg->buffer) > 0){
                         token = GetToken(arg->buffer, 2);
-                        if(arg->type == SUCCEED_RETURN){
+                        if(arg->type == SUCCEED_PACK){
                             printf("[+]Server :%s\n", token[1]);
                         }
-                        else if(arg->type == ERROR_RETURN){
+                        else if(arg->type == ERROR_PACK){
                             printf("[-]Server :%s\n", token[1]);
                         }else{
                             return;

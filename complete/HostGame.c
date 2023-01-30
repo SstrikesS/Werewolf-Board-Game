@@ -81,7 +81,7 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                 memset(buffer, 0, sizeof(*buffer));
                 buffer = GetMess(token, 0, EXIT_PACK);
                 sendToServer(sockfd, server_addr, buffer);
-
+                currUser->isHost = -1;
                 SDL_DestroyWindow(window);
                 SDL_DestroyRenderer(renderer);
                 window = NULL;
@@ -167,7 +167,7 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     memset(buffer, 0, sizeof(*buffer));
                     buffer = GetMess(token, 0, EXIT_PACK);
                     sendToServer(sockfd, server_addr, buffer);
-
+                    currUser->isHost = -1;
                     free(num);
                     free(roomName);
                     free(buffer);
