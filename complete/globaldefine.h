@@ -16,4 +16,13 @@
 #define MAX_CLIENT 100
 
 #define PORT 27015 //defaut port to server listen
+#define PPORT 27016 //default port to get ping
 #define SERVER_IP_ADDR "26.57.39.175" //the ip address of server
+
+#define WEREWOLF 1
+#define WITCH 2
+#define PROTECTER 3
+#define SEER 4
+#define HUNTER 5
+#define VILLAGE 6
+#define SPECTATOR 7

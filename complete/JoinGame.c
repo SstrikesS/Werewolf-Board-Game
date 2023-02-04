@@ -17,12 +17,8 @@ SDL_Rect BoxLable = {395, 60, 0, 0};
 SDL_Rect refreshButton = {400, 490, 0, 0};
 int roomcount;
 
-void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist){
+void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist, char **token){
     int i, j;
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    } 
     char *buffer = calloc(MAX_MESSAGE ,sizeof(char));
 
     memset(buffer, 0, sizeof(*buffer));
@@ -31,7 +27,10 @@ void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist){
 
     memset(buffer, 0, sizeof(*buffer));
     ListenToServer(sockfd, server_addr, buffer);
+
+    free(token);
     token = GetToken(buffer, 2);
+    
     enum pack_type type = (enum pack_type)atoi(token[0]);
     if(type == JOIN_GAME){
         roomcount = atoi(token[1]);
@@ -39,9 +38,6 @@ void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist){
     }else{
         printf("[-]Can't get room list from server!\n");
         return;
-    }
-    for(i = 0; i < 2; i++){
-        memset(token[i], 0, sizeof(*token[i]));
     }
     for(i = 0; i < roomcount; i++){
         roomlist[i].roomName = calloc(MAX_RNAME , sizeof(char));
@@ -51,16 +47,22 @@ void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist){
 
     memset(buffer, 0, sizeof(*buffer));
     ListenToServer(sockfd, server_addr, buffer);
+    free(token);
     token = GetToken(buffer, roomcount * 3 + 1);
     j = 1;
     for(i = 0; i < roomcount; i++){
         strcpy(roomlist[i].roomName, token[j++]);
         strcpy(roomlist[i].maxPlayer, token[j++]);
         strcpy(roomlist[i].playerCount, token[j++]);
+        roomlist[i].roomName[strlen(roomlist[i].roomName)] = '\0';
+        roomlist[i].maxPlayer[strlen(roomlist[i].maxPlayer)] = '\0';
+        roomlist[i].playerCount[strlen(roomlist[i].playerCount)] = '\0';
     }
+    
     for(i = 0; i < roomcount *3 + 1; i++){
         memset(token[i], 0, sizeof(*token[i]));
     }
+    free(buffer);
 }
 
 void RenderJoinScreen(SDL_Renderer *renderer){
@@ -114,6 +116,8 @@ void getListBox(SDL_Renderer *renderer, Row *roomlist){
 }
 
 void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *renderer, SDL_Window *window, CurrentPlayer *currUser){
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
     int i, row = -1;
     SDL_Event JEvent;
     SDL_Surface *surface = NULL;
@@ -131,15 +135,12 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
     } 
     char *buffer = calloc(MAX_MESSAGE ,sizeof(char));
     char *status = calloc(MAX_RNAME, sizeof(char));
-
-    GetRoomList(sockfd, server_addr, roomlist);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-    SDL_RenderClear(renderer);
+    GetRoomList(sockfd, server_addr, roomlist, token);
     jSurface = IMG_Load("bin/img/hostgame.jpg");
     getListBox(renderer, roomlist);
     RenderJoinScreen(renderer);
     SDL_RenderPresent(renderer);
-
+    
     while(1){
         while(SDL_PollEvent(&JEvent)){
             switch (JEvent.type){
@@ -223,7 +224,7 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                         strcat(status, roomlist[i].playerCount);
                         strcat(status, "/");
                         strcat(status, roomlist[i].maxPlayer);
-
+                        
                         surface = TTF_RenderText_Blended(arialfont, roomlist[i].roomName, blue_color);
                         listTexture = SDL_CreateTextureFromSurface(renderer, surface);    
                         SDL_RenderCopy(renderer, listTexture, NULL, &roomlist[i].roomNameBox);
@@ -254,7 +255,10 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     memset(buffer, 0, sizeof(*buffer));
                     buffer = GetMess(token, 0, EXIT_PACK);
                     sendToServer(sockfd, server_addr, buffer);
-
+                    currUser->isHost = -1;
+                    currUser->role = -1;
+                    memset(currUser->room, 0, sizeof(*currUser->room));
+                    currUser->id = -1;
                     free(buffer);
                     free(token);
                     free(status);
@@ -264,7 +268,7 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     return;
                 }
                 if(check_mouse_pos(refreshButton) == 1){
-                    GetRoomList(sockfd, server_addr, roomlist);
+                    GetRoomList(sockfd, server_addr, roomlist, token);
                     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
                     SDL_RenderClear(renderer);
                     jSurface = IMG_Load("bin/img/hostgame.jpg");
@@ -278,29 +282,23 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                         strcpy(token[1], roomlist[row].roomName);
                         buffer = GetMess(token, 2, JOIN_ROOM);
                         sendToServer(sockfd, server_addr, buffer);
-                        for(i = 0; i < 2; i++){
-                            memset(token[i], 0 , sizeof(*token[i]));
-                        }
                         memset(buffer, 0, sizeof(*buffer));
                         ListenToServer(sockfd, server_addr, buffer);
-                        printf("buffer = %s\n", buffer);
+                        //printf("buffer = %s\n", buffer);
+                        free(token);
                         token = GetToken(buffer, 2);
                         type = (enum pack_type)atoi(token[0]);
                         if(type == SUCCEED_PACK){
                             printf("[+]Joining Room -> %s\n", token[1]);
                             strcpy(currUser->room, roomlist[row].roomName);
+                            free(token);
                             WaitingRoom(sockfd, server_addr, renderer, window, currUser);
                             return;
                         }else if(type == ERROR_PACK){
                             printf("[-]Joining Room -> %s\n", token[1]);
-                        }else{
-                            free(buffer);
-                            free(token);
-                            free(status);
-                            SDL_FreeSurface(jSurface);
-                            SDL_DestroyTexture(listTexture);
-                            SDL_FreeSurface(surface);
-                            return;
+                            for(i = 0; i < 2; i++){
+                                memset(token[i], 0 ,sizeof(*token[i]));
+                            }
                         }
                     }
                 }

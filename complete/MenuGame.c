@@ -1,5 +1,6 @@
 #include "MenuGame.h"
-
+#include <pthread.h>
+#include <windows.h>
 
 char *list[] = {"Player Name", "Host Game", "Join Game", "Exit"};
 
@@ -10,6 +11,24 @@ SDL_Rect textRect = {710, 175, 0, 0};
 TTF_Font *menuFont;
 TTF_Font *playerFont;
 CurrentPlayer *currUser;
+
+void *sendToPingServer(){
+    pthread_detach(pthread_self());
+    char *buffer = calloc(4, sizeof(char));
+    sprintf(buffer, "%d", currUser->id);
+    printf("%s\b", buffer);
+    struct sockaddr_in pingServer;
+    SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ZeroMemory(&pingServer, sizeof(pingServer));
+    pingServer.sin_family = AF_INET;
+	pingServer.sin_port = htons(PORT + 1);
+	pingServer.sin_addr.S_un.S_addr = inet_addr(SERVER_IP_ADDR);
+    while(currUser->id != -1){
+        sendToServer(sockfd, pingServer, buffer);
+        Sleep(1000);
+    }
+    return NULL;
+}
 
 void GetCurrUser(){
     currUser = calloc(1, sizeof(CurrentPlayer));
@@ -74,7 +93,7 @@ void MainMenu(SDL_Window *window, SDL_Renderer *renderer){
     SDL_Event menuE;
     SDL_Color yellow_color = {255, 255, 0};
     SDL_Color red_color = {255, 0, 0};
-
+    pthread_t tid;
     GetCurrUser();
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
@@ -122,6 +141,7 @@ void MainMenu(SDL_Window *window, SDL_Renderer *renderer){
                     if(check == ERROR_RETURN){
                         
                     }else{
+                        pthread_create(&tid, NULL, sendToPingServer, NULL);
                         HostGame(sockfd, server_addr, renderer, window, currUser);
                         RenderMenuScreen(renderer);
                         SDL_RenderPresent(renderer);
@@ -138,6 +158,7 @@ void MainMenu(SDL_Window *window, SDL_Renderer *renderer){
                     if(check == ERROR_RETURN){
                         
                     }else{
+                        pthread_create(&tid, NULL, sendToPingServer, NULL);
                         JoinGame(sockfd, server_addr, renderer, window, currUser);
                         RenderMenuScreen(renderer);
                         SDL_RenderPresent(renderer);

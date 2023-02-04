@@ -66,14 +66,12 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
     num = calloc(4, sizeof(char));
     bloodfont = TTF_OpenFont("bin/font/font.ttf", 50);
     arialfont = TTF_OpenFont("bin/font/arial.ttf", 50);
-    
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     hSurface = IMG_Load("bin/img/hostgame.jpg");
     getBox(renderer);
     RenderHostScreen(renderer);
     SDL_RenderPresent(renderer);
-    
     while(1){
         while(SDL_PollEvent(&hEvent)){
             switch (hEvent.type){
@@ -81,11 +79,10 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                 memset(buffer, 0, sizeof(*buffer));
                 buffer = GetMess(token, 0, EXIT_PACK);
                 sendToServer(sockfd, server_addr, buffer);
-                currUser->isHost = -1;
+
                 SDL_DestroyWindow(window);
                 SDL_DestroyRenderer(renderer);
                 window = NULL;
-                //TTF_Quit();
                 IMG_Quit();
                 SDL_Quit();
                 exit(0);
@@ -168,6 +165,9 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     buffer = GetMess(token, 0, EXIT_PACK);
                     sendToServer(sockfd, server_addr, buffer);
                     currUser->isHost = -1;
+                    currUser->role = -1;
+                    memset(currUser->room, 0, sizeof(*currUser->room));
+                    currUser->id = -1;
                     free(num);
                     free(roomName);
                     free(buffer);
@@ -209,15 +209,14 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     sendToServer(sockfd, server_addr, buffer);
                     memset(buffer, 0, sizeof(*buffer));
                     ListenToServer(sockfd, server_addr, buffer);
-                    for(i = 0; i < 3; i++){
-                        memset(token[i], 0, sizeof(*token[i]));
-                    }
+                    free(token);
                     token = GetToken(buffer, 2);
                     enum pack_type type = (enum pack_type)atoi(token[0]);
                     if(type == SUCCEED_PACK){
                         printf("[+]Room's status -> Creating -> %s\n", token[1]);
                         strcpy(currUser->room, roomName);
                         currUser->isHost = 1;
+                        free(token);
                         WaitingRoom(sockfd, server_addr, renderer, window, currUser);
                         return;
                     }else if(type == ERROR_PACK){

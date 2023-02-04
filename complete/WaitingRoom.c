@@ -4,11 +4,13 @@ int playerCount = 0;
 int roomMax = 0;
 int isStart = -1;
 int isNight = -1;
+int isYourTurn = -1;
 int isPlayerJoinning = -1;
 int updateChatBox = -1;
 char **groupChat;
 int maxLine = 0;
 int curr_line = 0;
+int timeout = 0;
 char *Userchat;
 
 SDL_Surface *wSurface;
@@ -20,6 +22,13 @@ SDL_Rect ClockRect = {370, 20, 80, 60};
 SDL_Rect ClockText = {0, 0, 0, 0};
 SDL_Rect NotiRect = {580, 20, 410, 60};
 SDL_Rect NotiText = {0, 0, 0, 0};
+SDL_Rect SkipRect = {470, 25, 0, 0};
+SDL_Rect VoteRect = {625, 540, 0, 0};
+SDL_Rect Skill_1Rect = {400, 540, 0, 0};
+SDL_Rect Skill_2Rect = {850, 540, 0, 0};
+
+char *skill_1;
+char *skill_2;
 typedef struct _SettingRow{
     SDL_Rect settingRow;
     char *text;
@@ -49,6 +58,8 @@ typedef struct _Arg{
     SettingRow *Srow;
     enum pack_type type;
     char *buffer;
+    char **token;
+    int timeout;
 }Arg;
 
 SDL_Rect ChatField = {10, 555, 350, 43};
@@ -85,29 +96,179 @@ void rendertext(SDL_Renderer *renderer ,TTF_Font *font, char *text, SDL_Color co
     SDL_BlitSurface(sur, NULL, wSurface, textRect);
     SDL_FreeSurface(sur);
 }
+void *time_countdown(void *argument){
+    pthread_detach(pthread_self());
+    Arg *arg = (Arg *)argument;
+    char *timetext = calloc(3, sizeof(char));
+    SDL_Color red_color = {255, 0, 0};
+    SDL_Color yellow_color = {255, 255, 0};
+    SDL_Surface *sur;
+    SDL_Texture *texture;
+    char *tmp = calloc(2, sizeof(char));
+    TTF_Font *font = TTF_OpenFont("bin/font/font.ttf", 40);
+    SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+    do{
+        SDL_Delay(1000);
+        // printf("%d\n", arg->timeout);
+        memset(timetext, 0, sizeof( *timetext));
+        
+        if(arg->timeout > 10){
+            sprintf(timetext, "%d", arg->timeout);
+            sur = TTF_RenderText_Blended(font, timetext, yellow_color);
+        }else{
+            sprintf(tmp, "%d", arg->timeout);
+            strcat(timetext, "0");
+            strcat(timetext, tmp);
+            sur = TTF_RenderText_Blended(font, timetext, red_color);
+        }
+            texture = SDL_CreateTextureFromSurface(arg->renderer, sur);
+        SDL_RenderFillRect(arg->renderer, &ClockRect);
+        SDL_RenderCopy(arg->renderer, texture, NULL, &ClockText);
+        SDL_RenderPresent(arg->renderer);
+        arg->timeout--;
+    }while (arg->timeout >= 0);
+    return NULL;
+}
 
-void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, CurrentPlayer *currUser, char *buffer){
+void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow, Arg *arg){
+    TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 20);
+    TTF_Font * bloodfont_50 = TTF_OpenFont("bin/font/font.ttf", 50);
+    SDL_Color red_color = {255, 0, 0};
+    int i;
+    SDL_Surface *sur = NULL;
+    SDL_Texture *texture = NULL;
+    char *vote = "Vote";
+    char *skip = "Skip";
+    skill_1 = calloc(30, sizeof(char));
+    skill_2 = calloc(30, sizeof(char));
+    memset(Srow[3].text, 0, sizeof(*Srow[3].text));
+    memset(Srow[2].text, 0, sizeof(*Srow[2].text));
+    memset(Srow[2].text, 0, sizeof(*Srow[4].text));
+    strcpy(Srow[3].text, "Your role: ");
+    strcpy(Srow[2].text, "Time: Night");
+    strcpy(Srow[4].text, "Your status: Alive");
+    switch (currUser->role){
+    case WEREWOLF:
+        strcpy(skill_1 , "Vote Kill");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+
+        strcat(Srow[3].text, "WereWolf");
+        VoteRect.x = 850;
+        break;
+    case WITCH:
+        strcpy(skill_1 , "Protect");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        Skill_1Rect.x = 370;
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+        strcpy(skill_2 , "Poision");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_2, red_color);
+        TTF_SizeText(bloodfont_50, skill_2, &Skill_2Rect.w, &Skill_2Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
+        strcat(Srow[3].text, "Witch");
+        break;
+    case PROTECTER:
+        strcpy(skill_1 , "Protect");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+        strcat(Srow[3].text, "Protecter");
+        VoteRect.x = 850;
+        break;
+    case SEER:
+        strcpy(skill_1 , "Predict");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+        strcat(Srow[3].text, "Seer");
+        VoteRect.x = 850;
+        break;
+    case HUNTER:
+        strcpy(skill_1 , "Hunt");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+        strcat(Srow[3].text, "Seer");
+        VoteRect.x = 850;
+        break;
+    case VILLAGE:
+        strcpy(skill_1 , "Sleep");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+        TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        Skill_1Rect.x = 370;
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+        strcpy(skill_2 , "Eat");
+
+        sur = TTF_RenderText_Blended(bloodfont_50, skill_2, red_color);
+        TTF_SizeText(bloodfont_50, skill_2, &Skill_2Rect.w, &Skill_2Rect.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
+        strcat(Srow[3].text, "Village");
+        break;
+    default:
+        break;
+    }
+
+    sur = TTF_RenderText_Blended(bloodfont_50, vote, red_color);
+    TTF_SizeText(bloodfont_50, vote, &VoteRect.w, &VoteRect.h);
+    texture = SDL_CreateTextureFromSurface(renderer, sur);
+    SDL_RenderCopy(renderer, texture, NULL, &VoteRect);
+
+    sur = TTF_RenderText_Blended(bloodfont_50, skip, red_color);
+    TTF_SizeText(bloodfont_50, skip, &SkipRect.w, &SkipRect.h);
+    texture = SDL_CreateTextureFromSurface(renderer, sur);
+    SDL_RenderCopy(renderer, texture, NULL, &SkipRect);
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    for(i = 2; i <= 4; i++){
+        SDL_RenderFillRect(renderer, &Srow[i].settingRow);
+        sur = TTF_RenderText_Blended(arialfont, Srow[i].text, red_color);
+        TTF_SizeText(arialfont, Srow[i].text, &Srow[i].settingRow.w, &Srow[i].settingRow.h);
+        texture = SDL_CreateTextureFromSurface(renderer, sur);
+        SDL_RenderCopy(renderer, texture, NULL, &Srow[i].settingRow);
+    }
+
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(sur);
+    isNight = 1;
+}
+
+void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, CurrentPlayer *currUser, char *buffer, char **token){
     int i, j;
     enum pack_type type;
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    } 
+    free(token);
     token = GetToken(buffer, 3);
     type = (enum pack_type)atoi(token[0]);
     if(type == ROOM_INFO){
         playerCount = atoi(token[1]);
         roomMax = atoi(token[2]);
         memset(buffer, 0 , sizeof(*buffer));
-        for(i = 0; i < 3; i++){
-            memset(token[i], 0, sizeof(*token[i]));
-        }
         ListenToServer(sockfd, server_addr, buffer);
-        //printf("buffer2 = %s\n", buffer);
+        free(token);
         token = GetToken(buffer, playerCount * 2 + 1);
         type = (enum pack_type)atoi(token[0]);
         if(type == ROOM_INFO){
             j = 1;
+            for(i = 0; i < 12; i++){
+                memset(pBox[i].playername, 0, sizeof(*pBox[i].playername));
+                pBox[i].player_id = -1;
+            }
             for(i = 0; i < playerCount; i++){
                 pBox[i].player_id = atoi(token[j++]);
                 if(pBox[i].player_id == currUser->id){
@@ -117,12 +278,14 @@ void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, Cur
                     strcpy(pBox[i].playername, token[j++]);
                 }
             }
-        }else{
-            
+        }
+        for(i = 0; i < playerCount *2 + 1; i++){
+            memset(token[i], 0 ,sizeof(*token[i]));
         }
     }
-    free(token);
 }
+
+
 
 void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currUser, SettingRow *Srow){
     int i;
@@ -151,6 +314,10 @@ void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currU
         }
     }
     SDL_FillRect(wSurface, &settingBox, SDL_MapRGB(wSurface->format, 0, 0, 0));
+
+    for(i = 0; i < 5; i++){
+        memset(Srow[i].text, 0 ,sizeof(*Srow[i].text));
+    }
     strcpy(Srow[0].text, "Room name: ");
     strcat(Srow[0].text, currUser->room);
     strcpy(Srow[1].text, "Status: ");
@@ -171,6 +338,7 @@ void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currU
         Srow[i].settingRow.y = 20 + i *40 ;
         rendertext(renderer, arialfont, Srow[i].text, red_color, &Srow[i].settingRow);
     }
+
     SDL_FreeSurface(sur);
 }
 
@@ -219,14 +387,6 @@ void GetChatBox(SDL_Renderer *renderer, int curr_line){
                 SDL_BlitSurface(surface, NULL, wSurface, &chatTextBox[i]);
             }
         }
-        
-        // for(i = 14; i >= 0; i++){
-        //     if(chatTextBox.w > (ChatField.w - 10) * i){
-        //         chatTextBox.h = chatTextBox.h * (i + 1);
-        //         chatTextBox.w = ChatField.w - 10;
-        //         break;
-        //     }     
-        // }
         
         SDL_FreeSurface(surface);
         SDL_DestroyTexture(texture);
@@ -284,39 +444,53 @@ void *handleMess(void *argument){
     pthread_detach(pthread_self());
     int i;
     Arg *arg = (Arg *)argument;
-    char *buffer = calloc(MAX_MESSAGE, sizeof(char));
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    }
+    pthread_t tid;
+    SDL_Surface *surface = NULL;
+    SDL_Texture *texture = NULL;
+    TTF_Font * bloodfont_25 = TTF_OpenFont("bin/font/font.ttf", 25);
+    SDL_Color yellow_color = {255, 255, 0};
     while(1){ 
-        //printf("[+]Thread is waiting...\n");
-        memset(buffer, 0 , sizeof(*buffer));
-        ListenToServer(arg->sockfd, arg->server_addr, buffer);
-        memset(arg->buffer, 0 , sizeof(*(arg->buffer)));
-        strcpy(arg->buffer, buffer);
-        //printf("buffer = %s\n", arg->buffer);
-        arg->type = GetType(buffer);
+        memset(arg->buffer, 0, sizeof(*(arg->buffer)));
+        ListenToServer(arg->sockfd, arg->server_addr, arg->buffer);
+        printf("buffer = %s\n", arg->buffer);
+        arg->type = GetType(arg->buffer);
         if(arg->type == ROOM_INFO){
-            //printf("[+]Thread is executing\n");
             isPlayerJoinning = 1;
-            GetRoom(arg->sockfd, arg->server_addr, arg->pBox, arg->currUser, buffer);
+            GetRoom(arg->sockfd, arg->server_addr, arg->pBox, arg->currUser, arg->buffer, arg->token);
             GetPlayerList(arg->renderer, arg->pBox, arg->currUser, arg->Srow);
         }else if(arg->type == PUBLIC_MESSAGE_PACK){
             updateChatBox = 1;
-            token = GetToken(arg->buffer, 2);
-            saveChat(arg->currUser, token[1]);
+            free(arg->token);
+            arg->token = GetToken(arg->buffer, 2);
+            saveChat(arg->currUser, arg->token[1]);
             if(curr_line == maxLine){
                 GetChatBox(arg->renderer, maxLine);
             }
             for(i = 0; i < 2; i++){
-                memset(token[i], 0 , sizeof(*token[i]));
+                memset(arg->token[i], 0 , sizeof(*arg->token[i]));
             }
         }else if(arg->type == START_GAME){
-            isStart = 1;
-            token = GetToken(arg->buffer, 2);
-            arg->currUser->role = (enum Role)atoi(token[1]);
+            free(arg->token);
+            arg->token = GetToken(arg->buffer, 2);
+            arg->currUser->role = atoi(arg->token[1]);
             printf("Your role = %d\n", (int)arg->currUser->role);
+            for(i = 0; i < 2; i++){
+                memset(arg->token[i], 0, sizeof(*arg->token[i]));
+            }
+            isStart = 1;
+        }
+        else if(arg->type == HOST_GAME){
+            arg->currUser->isHost = 1;
+            GetButton(arg->renderer, arg->currUser);
+        }else if(arg->type == PLAYER_TURN){
+            isYourTurn = 1;
+            SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+            SDL_RenderFillRect(arg->renderer, &NotiRect);
+            surface = TTF_RenderText_Blended(bloodfont_25, "Your Turn!", yellow_color);
+            texture = SDL_CreateTextureFromSurface(arg->renderer, surface);    
+            SDL_RenderCopy(arg->renderer, texture, NULL, &NotiText);
+            arg->timeout = 30;
+            pthread_create(&tid, NULL, time_countdown, (void *)arg);
         }
     }
     return NULL;
@@ -328,7 +502,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     int i, j;
     pthread_t tid;
     groupChat = calloc(1, sizeof(char *));
-    for(i = 0; i < 1000; i++){
+    for(i = 0; i < 300; i++){
         groupChat[i] = calloc(100, sizeof(char));
     }
     Userchat = calloc(MAX_MESSAGE, sizeof(char));
@@ -337,8 +511,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
         chatTextBox[i].x = 15;
         chatTextBox[i].y = 265 + 18 * i;
     }
-    // strcpy(Userchat, "fhsa;fjsa;dfnas;tuf;osrhwerwprwfdpafxvnpxiuvhxiourwfdpyyafxvnpxiuvhxioyyyuhvozxihv8zxc7v8xcvxv");
-    // enum pack_type type;
     char **token = calloc(200, sizeof(char *));
     for(i = 0; i < 200; i++){
         token[i] = calloc(MAX_MESSAGE, sizeof(char));
@@ -352,7 +524,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     SDL_Color red_color = {255, 0, 0};
     SDL_Color yellow_color = {255, 255, 0};
     TTF_Font * bloodfont = TTF_OpenFont("bin/font/font.ttf", 40);
-    // TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 16);
+    TTF_Font * bloodfont_50 = TTF_OpenFont("bin/font/font.ttf", 50);
     for(i = 0; i < 5; i++){
         Srow[i].text = calloc(MAX_MESSAGE, sizeof(char));
     }
@@ -378,7 +550,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
         pBox[i].roleRect.y = 240 + j * 200;
         pBox[i].playerImG.y = 155 + j * 200;
     }
-
     Arg *arg = calloc(1, sizeof(Arg));
     arg->sockfd = sockfd;
     arg->server_addr = server_addr;
@@ -387,6 +558,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     arg->renderer = renderer;
     arg->Srow = Srow;
     arg->buffer = ListenBuffer;
+    arg->token = token;
     wSurface = IMG_Load("bin/img/ingame.jpg");
 
     pthread_create(&tid, NULL, handleMess, (void *)arg);
@@ -394,7 +566,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     SDL_FillRect(wSurface, &chatBox, SDL_MapRGB(wSurface->format, 0, 0, 0));
     SDL_FillRect(wSurface, &ChatField, SDL_MapRGB(wSurface->format, 0, 0, 0));
 
-    //GetUserChat(renderer);
     GetButton(renderer, currUser);
 
     SDL_Delay(500);
@@ -414,11 +585,14 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
             SDL_RenderPresent(renderer);
             updateChatBox = -1;
         }
+        if(isStart == 1){
+            UpdateUI(renderer, currUser, Srow, arg);
+            isStart = 2;
+            SDL_RenderPresent(renderer);
+        }
         while(SDL_PollEvent(&gEvent)){
             switch (gEvent.type){
             case SDL_QUIT:
-                j = pthread_cancel(tid);
-            
                 memset(SendBuffer, 0, sizeof(*SendBuffer));
                 SendBuffer = GetMess(token, 0, EXIT_PACK);
                 sendToServer(sockfd, server_addr, SendBuffer);
@@ -427,7 +601,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                 SDL_DestroyWindow(window);
                 SDL_DestroyRenderer(renderer);
                 window = NULL;
-                //TTF_Quit();
                 IMG_Quit();
                 SDL_Quit();
                 exit(0);
@@ -451,33 +624,79 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                     texture = SDL_CreateTextureFromSurface(renderer, surface);    
                     SDL_RenderCopy(renderer, texture, NULL, &ButtonStart);
                 }
+                if(isStart > 0 && isYourTurn == 1){
+                    if(check_mouse_pos(SkipRect) == 1){
+                        surface = TTF_RenderText_Blended(bloodfont_50, "Skip", yellow_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &SkipRect);
+                    }else{
+                        surface = TTF_RenderText_Blended(bloodfont_50, "Skip", red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &SkipRect);
+                    }
+                    if(check_mouse_pos(VoteRect) == 1 && isNight == -1){
+                        surface = TTF_RenderText_Blended(bloodfont_50, "Vote", yellow_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &VoteRect);
+                    }else{
+                        surface = TTF_RenderText_Blended(bloodfont_50, "Vote", red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &VoteRect);
+                    }
+                    if(check_mouse_pos(Skill_1Rect) == 1 && isNight == 1){
+                        surface = TTF_RenderText_Blended(bloodfont_50, skill_1, yellow_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+                    }else{
+                        surface = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+                    }
+                    if(strlen(skill_2) > 0){
+                        if(check_mouse_pos(Skill_2Rect) == 1 && isNight == 1){
+                            surface = TTF_RenderText_Blended(bloodfont_50, skill_2, yellow_color);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                            SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
+                        }else{
+                            surface = TTF_RenderText_Blended(bloodfont_50, skill_2, red_color);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                            SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
+                        }
+                    }
+                }
                 SDL_RenderPresent(renderer);
                 break;
             case SDL_MOUSEBUTTONDOWN:
                 if(check_mouse_pos(ButtonStart) == 1 && isStart == -1){
                     memset(SendBuffer, 0, sizeof(*SendBuffer));
                     SendBuffer = GetMess(token , 0, START_GAME);
-                    sendToServer(sockfd, server_addr, SendBuffer);
-
-                    while(strlen(arg->buffer) > 0){
-                        token = GetToken(arg->buffer, 2);
-                        if(arg->type == SUCCEED_PACK){
-                            printf("[+]Server :%s\n", token[1]);
-                        }
-                        else if(arg->type == ERROR_PACK){
-                            printf("[-]Server :%s\n", token[1]);
-                        }else{
-                            return;
-                        }
-                        for(i = 0; i < 2; i++){
-                            memset(token[i], 0, sizeof(*token[i]));
-                        }
-                        break;
-                    }            
+                    sendToServer(sockfd, server_addr, SendBuffer);           
                 }
-                if(check_mouse_pos(ButtonBack) == 1){
-                    pthread_cancel(tid);
+                if(check_mouse_pos(ButtonBack) == 1  && isStart == -1){
+                    free(groupChat);
+                    free(Userchat);
+                    SDL_FreeSurface(wSurface);
+                    free(chatTextBox);
+                    free(skill_1);
+                    free(skill_2);
+                    free(token);
+                    free(SendBuffer);
+                    free(ListenBuffer);
+                    free(pBox);
+                    free(Srow);
+                    SDL_FreeSurface(surface);
+                    SDL_DestroyTexture(texture);
+                    free(arg);
+
+                    currUser->isHost = -1;
+                    currUser->role = -1;
+                    memset(currUser->room, 0, sizeof(*currUser->room));
+                    currUser->id = -1;
                     return;
+                }
+                if(check_mouse_pos(SkipRect) == 1 && isNight == 1 && isStart > 0 && isYourTurn == 1){
+                    arg->timeout = 0;
+                    isYourTurn = -1;
                 }
                 break;
             case SDL_MOUSEWHEEL:
@@ -512,15 +731,11 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                         memset(token[0], 0 ,sizeof(*token[0]));
                         sendToServer(sockfd, server_addr, SendBuffer);
                         
-
                         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
                         SDL_RenderFillRect(renderer, &ChatField);
                         memset(SendBuffer, 0, sizeof(*SendBuffer));
                         strcat(SendBuffer, "You: ");
                         strcat(SendBuffer, Userchat);
-
-                        // saveChat(currUser, SendBuffer);
-                        // GetChatBox(renderer);
 
                         memset(SendBuffer, 0, sizeof(*SendBuffer));
                         memset(Userchat, 0 , sizeof(*Userchat));

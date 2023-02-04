@@ -11,11 +11,11 @@ enum pack_type GetType(char *message){
 
 char **GetToken(char *message, int tokenSize){
     int i;
-    char **token = calloc(tokenSize, sizeof(char *));
+    char **token = calloc(200, sizeof(char *));
     char *tmp = calloc(MAX_MESSAGE, sizeof(char));
     char *buffer = calloc(MAX_MESSAGE, sizeof(char));
     strcpy(buffer, message);
-    for(i = 0; i < tokenSize; i++){
+    for(i = 0; i < 200; i++){
         token[i] = calloc(MAX_MESSAGE, sizeof(char));
     }
     tmp = strtok(buffer, "|");
@@ -51,29 +51,11 @@ char *GetMess(char **token, int tokenSize, enum pack_type type){
     return packet_str;
 }
 
-
-char *GetLoginMess(char *name){
-    char *type_str = calloc(4, sizeof(char));
-    char *packet_str = calloc(MAX_MESSAGE, sizeof(char));
-    
-    memset(packet_str, 0, sizeof(*packet_str));
-    enum pack_type type = LOGIN_PACK;
-    sprintf(type_str, "%d", (int)type);   
-    strcat(packet_str, type_str);
-    strcat(packet_str, "|");
-    strcat(packet_str, name);
-    return packet_str;
+char **makeCleanToken(){
+    int i;
+    char **token = calloc(200, sizeof(char *));
+    for(i = 0; i < 200; i++){
+        token[i] = calloc(MAX_MESSAGE, sizeof(char));
+    }
+    return token;
 }
-
-char *GetNotiMess(char *noti, enum pack_type type){
-    char *type_str = calloc(4, sizeof(char));
-    char *packet_str = calloc(MAX_MESSAGE, sizeof(char));
-
-    memset(packet_str, 0, sizeof(*packet_str));
-    sprintf(type_str, "%d", (int)type);   
-    strcat(packet_str, type_str);
-    strcat(packet_str, "|");
-    strcat(packet_str, noti);
-    return packet_str;
-}
-

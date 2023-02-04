@@ -1,12 +1,16 @@
 {
     "C_Cpp.errorSquiggles": "enabled",
     "files.associations": {
+        "*.embeddedhtml": "html",
         "*.php": "html",
         "sdl_rect.h": "c",
         "sdl_render.h": "c",
         "string.h": "c",
         "sdl_image.h": "c",
         "globaldefine.h": "c",
-        "sdl_ttf.h": "c"
+        "sdl_ttf.h": "c",
+        "menugame.h": "c",
+        "pthread.h": "c",
+        "joingame.h": "c"
     }
 }
