@@ -273,21 +273,18 @@ void *clientHandle(void *argument){
     char *buffer = calloc(MAX_MESSAGE, sizeof(char));
     Argument *arg = (Argument *) argument;
     enum pack_type type = GetType(arg->message);
-    free(arg->token);
     switch (type){
     case LOGIN_PACK:
         arg->token = GetToken(arg->message, 2);
         addClient(arg->index, arg->token[1], arg->client);
-        for(i = 0; i < 2; i++){
-            memset(arg->token[i], 0, sizeof(*arg->token[i]));
-        }
+        memset(arg->token, 0, sizeof(*arg->token[0]));
         sprintf(arg->token[0], "%d", client_list[arg->index].id);
         if(arg->index != ERROR_RETURN){
             buffer = GetMess(arg->token, 1, SUCCEED_PACK);
         }else{
             buffer = GetMess(arg->token, 1, ERROR_PACK);
         }
-        memset(arg->token[0], 0, sizeof(*arg->token[0]));
+        memset(arg->token, 0, sizeof(*arg->token[0]));
         sendToClient(sockfd, client_list[arg->index].client, buffer);
         pthread_create(&tid_3, NULL, timeoutClient, (void*)arg);
         break;
@@ -302,20 +299,17 @@ void *clientHandle(void *argument){
         strcat(tmp, client_list[arg->index].name);
         strcat(tmp, ": ");
         strcat(tmp, arg->token[1]);
-
-        for(i = 0; i < 2; i++){
-            memset(arg->token[i], 0, sizeof(*arg->token[i]));
-        }
+        memset(arg->token, 0, sizeof(*arg->token[0]));
         strcpy(arg->token[0], tmp2);
         buffer = GetMess(arg->token, 1, PUBLIC_MESSAGE_PACK);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
 
         memset(buffer, 0 ,sizeof(*buffer));
-        memset(arg->token[0], 0, sizeof(*arg->token[0]));
+        memset(arg->token, 0, sizeof(*arg->token[0]));
 
         strcpy(arg->token[0], tmp);
         buffer = GetMess(arg->token, 1, PUBLIC_MESSAGE_PACK);
-        memset(arg->token[0], 0, sizeof(*arg->token[0]));
+        memset(arg->token, 0, sizeof(*arg->token[0]));
         for(i = 0; i < client_list[arg->index].room->max_client; i++){
             if(client_list[arg->index].room->player_id[i] > 0){
                 if(client_list[arg->index].room->player_id[i] == client_list[arg->index].id){
@@ -331,12 +325,10 @@ void *clientHandle(void *argument){
     case HOST_GAME:
         arg->token = GetToken(arg->message, 3);
         if(checkRoom(arg->token[1]) != 0){
-            for(i = 0; i < 3; i++){
-                memset(arg->token[i], 0, sizeof(*arg->token[i]));
-            }
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             strcpy(arg->token[0], "Room name already exists!");
             buffer = GetMess(arg->token, 1, ERROR_PACK);
-            memset(arg->token[0], 0, sizeof(*arg->token[0]));
+            memset(arg->token, 0, sizeof(*arg->token[0]));
         }else{
             for(i = 0; i < MAX_ROOM; i++){
                 if(strlen(room_list[i].room_id) == 0){
@@ -350,14 +342,12 @@ void *clientHandle(void *argument){
                     break;
                 }
             }
-            for(i = 0; i < 3; i++){
-                memset(arg->token[i], 0, sizeof(*arg->token[i]));
-            }
+            memset(arg->token, 0, sizeof(*arg->token[0]));
 
             printf("[+]%s is hosting room '%s' max player is '%d'!\n", client_list[arg->index].name, client_list[arg->index].room->room_id, client_list[arg->index].room->max_client);
             strcpy(arg->token[0], "OK!");
             buffer = GetMess(arg->token, 1, SUCCEED_PACK);
-            memset(arg->token[0], 0, sizeof(*arg->token[0]));
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             sendToClient(sockfd, client_list[arg->index].client, buffer);
         }
         GetRoom(arg->index, arg->token);
@@ -371,7 +361,7 @@ void *clientHandle(void *argument){
         sprintf(arg->token[0], "%d", validRoom);
         buffer = GetMess(arg->token, 1, JOIN_GAME);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
-        memset(arg->token[0], 0, sizeof(*arg->token[0]));
+        memset(arg->token, 0, sizeof(*arg->token[0]));
 
         j = 0;
         for(i = 0; i < MAX_ROOM; i++){
@@ -382,26 +372,20 @@ void *clientHandle(void *argument){
             }
         }
         buffer = GetMess(arg->token, j, HOST_GAME);
-        for(j = 0; i < j; i++){
-            memset(arg->token[i], 0, sizeof(*arg->token[i]));
-        }
+        memset(arg->token, 0, sizeof(*arg->token[0]));
         sendToClient(sockfd, client_list[arg->index].client, buffer);
         break;
     case JOIN_ROOM:
-        free(arg->token);
+        memset(arg->token, 0 ,sizeof(*arg->token[0]));
         arg->token = GetToken(arg->message, 3);
         j = checkRoom(arg->token[2]);
         if(j != -1){
             if(room_list[j].client_count < room_list[j].max_client && room_list[j].isStart != 1){
                 addPlayer(&room_list[j], arg->index);
-                for(i = 0; i < 3; i++){
-                    memset(arg->token[i], 0, sizeof(*arg->token[i]));
-                }
+                memset(arg->token, 0, sizeof(*arg->token[0]));
                 strcpy(arg->token[0], "OK!");
                 buffer = GetMess(arg->token, 2, SUCCEED_PACK);
-                for(i = 0; i < 2; i++){
-                    memset(arg->token[i], 0, sizeof(*arg->token[i]));
-                }
+                memset(arg->token, 0, sizeof(*arg->token[0]));
                 sendToClient(sockfd, client_list[arg->index].client, buffer);
                 for(i = 0; i < client_list[arg->index].room->max_client; i++){
                     if(client_list[arg->index].room->player_id[i] != 0){
@@ -410,18 +394,15 @@ void *clientHandle(void *argument){
                 }
             }
         }else{
-            for(i = 0; i < 3; i++){
-                memset(arg->token[i], 0, sizeof(*arg->token[i]));
-            }
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             strcpy(arg->token[0], "Room is already full!");
             buffer = GetMess(arg->token, 2, ERROR_PACK);
-            for(i = 0; i < 2; i++){
-                memset(arg->token[i], 0, sizeof(*arg->token[i]));
-            }
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             sendToClient(sockfd, client_list[arg->index].client, buffer);
         }
         break;
     case START_GAME:
+        arg->token = makeCleanToken();
         if(client_list[arg->index].room->client_count == client_list[arg->index].room->max_client){
             if(client_list[arg->index].room->max_client == 8){
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, PROTECTER, SEER, HUNTER};
@@ -442,14 +423,15 @@ void *clientHandle(void *argument){
             shuffle(client_list[arg->index].room->playerRole, client_list[arg->index].room->max_client);
             for(i = 0; i < client_list[arg->index].room->max_client; i++){
                 client_list[client_list[arg->index].room->player_id[i] - 1].role = client_list[arg->index].room->playerRole[i];
-                // printf("%d->%d\n", client_list[arg->index].room->player_id[i], client_list[arg->index].room->playerRole[i]);
+                printf("%d->%d\n", client_list[arg->index].room->player_id[i], client_list[arg->index].room->playerRole[i]);
             }
             for(i = 0; i < client_list[arg->index].room->max_client; i++){
-                memset(arg->token[0], 0 ,sizeof(*arg->token[0]));
+                memset(arg->token, 0 , sizeof(*arg->token[0]));
                 memset(buffer, 0, sizeof(*buffer));
                 sprintf(arg->token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
                 buffer = GetMess(arg->token, 1, START_GAME);
-                memset(arg->token[0], 0, sizeof(*arg->token[0]));
+                printf("buffer = %s\n", buffer);
+                memset(arg->token, 0, sizeof(*arg->token[0]));
                 sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
             }
             for(i = 0; i < client_list[arg->index].room->max_client; i++){

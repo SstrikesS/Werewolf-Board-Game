@@ -460,7 +460,7 @@ void *handleMess(void *argument){
             GetPlayerList(arg->renderer, arg->pBox, arg->currUser, arg->Srow);
         }else if(arg->type == PUBLIC_MESSAGE_PACK){
             updateChatBox = 1;
-            free(arg->token);
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             arg->token = GetToken(arg->buffer, 2);
             saveChat(arg->currUser, arg->token[1]);
             if(curr_line == maxLine){
@@ -470,7 +470,7 @@ void *handleMess(void *argument){
                 memset(arg->token[i], 0 , sizeof(*arg->token[i]));
             }
         }else if(arg->type == START_GAME){
-            free(arg->token);
+            memset(arg->token, 0, sizeof(*arg->token[0]));
             arg->token = GetToken(arg->buffer, 2);
             arg->currUser->role = atoi(arg->token[1]);
             printf("Your role = %d\n", (int)arg->currUser->role);
