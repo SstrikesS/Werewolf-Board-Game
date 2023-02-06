@@ -28,7 +28,7 @@ void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist, c
     memset(buffer, 0, sizeof(*buffer));
     ListenToServer(sockfd, server_addr, buffer);
 
-    free(token);
+    memset(token, 0, sizeof(*token[0]));
     token = GetToken(buffer, 2);
     
     enum pack_type type = (enum pack_type)atoi(token[0]);
@@ -47,8 +47,9 @@ void GetRoomList(SOCKET sockfd, struct sockaddr_in server_addr, Row *roomlist, c
 
     memset(buffer, 0, sizeof(*buffer));
     ListenToServer(sockfd, server_addr, buffer);
-    free(token);
+    memset(token, 0, sizeof(*token[0]));
     token = GetToken(buffer, roomcount * 3 + 1);
+    printf("token = %s!\n", token[1]);
     j = 1;
     for(i = 0; i < roomcount; i++){
         strcpy(roomlist[i].roomName, token[j++]);
@@ -129,10 +130,7 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
     SDL_Color yellow_color = {255, 255, 0};
     Row *roomlist = calloc(roomcount, sizeof(Row));
     enum pack_type type;
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    } 
+    char **token =  makeCleanToken();
     char *buffer = calloc(MAX_MESSAGE ,sizeof(char));
     char *status = calloc(MAX_RNAME, sizeof(char));
     GetRoomList(sockfd, server_addr, roomlist, token);
@@ -277,21 +275,25 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                 }
                 if(check_mouse_pos(joinButton) == 1){
                     if(row != -1){
+                        printf("row = %d and room = %s and player = %s!\n", row, roomlist[row].roomName, currUser->name);
                         memset(buffer, 0, sizeof(*buffer));
+                        printf("%d %d!\n", strlen(token[0]), strlen(token[1]));
                         strcpy(token[0], currUser->name);
                         strcpy(token[1], roomlist[row].roomName);
+                        printf("token = %s and %s!\n", token[0], token[1]);
                         buffer = GetMess(token, 2, JOIN_ROOM);
+                        printf("buffer = %s\n", buffer);
                         sendToServer(sockfd, server_addr, buffer);
                         memset(buffer, 0, sizeof(*buffer));
                         ListenToServer(sockfd, server_addr, buffer);
-                        //printf("buffer = %s\n", buffer);
-                        free(token);
+                        printf("buffer = %s\n", buffer);
+                        memset(token, 0, sizeof(*token[0]));
                         token = GetToken(buffer, 2);
                         type = (enum pack_type)atoi(token[0]);
                         if(type == SUCCEED_PACK){
                             printf("[+]Joining Room -> %s\n", token[1]);
                             strcpy(currUser->room, roomlist[row].roomName);
-                            free(token);
+                            memset(token, 0, sizeof(*token[0]));
                             WaitingRoom(sockfd, server_addr, renderer, window, currUser);
                             return;
                         }else if(type == ERROR_PACK){

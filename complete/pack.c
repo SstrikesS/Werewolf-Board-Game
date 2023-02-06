@@ -53,8 +53,8 @@ char *GetMess(char **token, int tokenSize, enum pack_type type){
 
 char **makeCleanToken(){
     int i;
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
+    char **token = calloc(50, sizeof(char *));
+    for(i = 0; i < 50; i++){
         token[i] = calloc(MAX_MESSAGE, sizeof(char));
     }
     return token;

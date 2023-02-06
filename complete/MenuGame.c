@@ -16,7 +16,7 @@ void *sendToPingServer(){
     pthread_detach(pthread_self());
     char *buffer = calloc(4, sizeof(char));
     sprintf(buffer, "%d", currUser->id);
-    printf("%s\b", buffer);
+    printf("%s\n", buffer);
     struct sockaddr_in pingServer;
     SOCKET sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     ZeroMemory(&pingServer, sizeof(pingServer));

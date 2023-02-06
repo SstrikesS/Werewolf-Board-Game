@@ -17,7 +17,7 @@
 
 #define PORT 27015 //defaut port to server listen
 #define PPORT 27016 //default port to get ping
-#define SERVER_IP_ADDR "26.57.39.175" //the ip address of server
+#define SERVER_IP_ADDR "26.141.211.77" //the ip address of server
 
 #define WEREWOLF 1
 #define WITCH 2

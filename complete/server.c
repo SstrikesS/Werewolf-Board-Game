@@ -131,12 +131,14 @@ void addPlayer(Room *room, int index){
 
 int checkEmptyRoom(Room *room){
     if(room->client_count == 0){
+        printf("[+]Room '%s' has '%d' player(s)!\n", room->room_id, room->client_count);
         printf("[+]Room '%s' has been removed!\n", room->room_id);
         memset(room->player_id, 0 , sizeof(*room->player_id));
         room->max_client = -1;
         memset(room->room_id, 0, sizeof(*room->room_id));
         return 0;
     }
+    printf("[+]Room '%s' has '%d' player(s)!\n", room->room_id, room->client_count);
     return 1;
 }
 
@@ -173,36 +175,41 @@ void removePlayer(Room *room, int player_id){
         if(room->player_id[i] == player_id){
             room->player_id[i] = 0;
             room->client_count--;
+            printf("[+]'%s' with id '%d' has left room '%s'!\n", client_list[player_id - 1].name, player_id, client_list[player_id - 1].room->room_id);
             break;
         }
     }
-    
 }
 
 void removeClient(int index, char **token){
     int i;
     if(client_list[index].id != -1){
-        printf("[+]%s with id %d has left the server!\n", client_list[index].name, client_list[index].id);
-        removePlayer(client_list[index].room, client_list[index].id);
-        if(checkEmptyRoom(client_list[index].room)){
-            if(client_list[index].host == 1){
-                char *buffer = calloc(12, sizeof(char));
-                buffer = GetMess(token, 0, HOST_GAME);
-                for(i = 0; i < client_list[index].room->max_client; i++){
-                    if(client_list[index].room->player_id[i] > 0 && client_list[index].id != client_list[index].room->player_id[i]){
-                        sendToClient(sockfd, client_list[client_list[index].room->player_id[i] - 1].client, buffer);
-                        client_list[client_list[index].room->player_id[i] - 1].host = 1;
-                        break;
+        if(client_list[index].room != NULL){
+            removePlayer(client_list[index].room, client_list[index].id);
+            if(checkEmptyRoom(client_list[index].room)){
+                if(client_list[index].host == 1){
+                    printf("[+]Changing host of room '%s'!\n", client_list[index].room->room_id);
+                    char *buffer = calloc(4, sizeof(char));
+                    buffer = GetMess(token, 0, HOST_GAME);
+                    for(i = 0; i < client_list[index].room->max_client; i++){
+                        if(client_list[index].room->player_id[i] > 0 && client_list[index].id != client_list[index].room->player_id[i]){
+                            sendToClient(sockfd, client_list[client_list[index].room->player_id[i] - 1].client, buffer);
+                            client_list[client_list[index].room->player_id[i] - 1].host = 1;
+                            printf("[+]Host of room '%s' is set to player '%s' with id '%d'!\n", client_list[index].room->room_id, client_list[client_list[index].room->player_id[i] -1].name, client_list[index].room->player_id[i]);
+                            break;
+                        }
                     }
+                    free(buffer);
                 }
-                free(buffer);
-            }
-            for(i = 0; i < client_list[index].room->max_client; i++){
-                if(client_list[index].room->player_id[i] != 0){
-                    GetRoom(client_list[index].room->player_id[i] - 1, token);
+                for(i = 0; i < client_list[index].room->max_client; i++){
+                    if(client_list[index].room->player_id[i] != 0){
+                        GetRoom(client_list[index].room->player_id[i] - 1, token);
+                        printf("[+]Sent to other player(s)!\n");
+                    }
                 }
             }
         }
+        printf("[+]'%s' with id '%d' has left the server!\n", client_list[index].name, client_list[index].id);
         client_list[index].id = -1;
         memset(client_list[index].name, 0, sizeof(*client_list[index].name));
         ZeroMemory(&client_list[index].client, sizeof(client_list[index].client));
@@ -319,7 +326,7 @@ void *clientHandle(void *argument){
         }
         break;
     case EXIT_PACK:
-        removeClient(arg->index, arg->token);
+        client_list[arg->index].timeout = 0;
         break;
     case HOST_GAME:
         arg->token = GetToken(arg->message, 3);
@@ -530,7 +537,7 @@ int main(){
 		client_list[i].id = -1;
 		client_list[i].name = calloc(MAX_NAME, sizeof(char));
         ZeroMemory(&client_list[i].client, sizeof(client_list[i].client));
-		client_list[i].room = calloc(1, sizeof(Room)); 
+		client_list[i].room = NULL; 
 	}
     pthread_create(&tid_2, NULL, listenPingServer, NULL);
     if(setupServer() == SUCCEED_RETURN){

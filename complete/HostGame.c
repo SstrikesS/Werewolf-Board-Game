@@ -51,16 +51,13 @@ void getBox(SDL_Renderer *renderer){
 }
 
 void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *renderer, SDL_Window *window, CurrentPlayer *currUser){
-    int i, extent, count = 0;
+    int extent, count = 0;
     SDL_Color yellow_color = {255, 255, 0};
     SDL_Color red_color = {255, 0, 0};
     SDL_Surface *sur = NULL;
     SDL_Texture *texture = NULL;
     SDL_Event hEvent;
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    } 
+    char **token = makeCleanToken();
     char *buffer = calloc(MAX_MESSAGE ,sizeof(char));
     roomName = calloc(MAX_RNAME, sizeof(char));
     num = calloc(4, sizeof(char));
@@ -209,14 +206,14 @@ void HostGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     sendToServer(sockfd, server_addr, buffer);
                     memset(buffer, 0, sizeof(*buffer));
                     ListenToServer(sockfd, server_addr, buffer);
-                    free(token);
+                    memset(token, 0, sizeof(*token[0]));;
                     token = GetToken(buffer, 2);
                     enum pack_type type = (enum pack_type)atoi(token[0]);
                     if(type == SUCCEED_PACK){
                         printf("[+]Room's status -> Creating -> %s\n", token[1]);
                         strcpy(currUser->room, roomName);
                         currUser->isHost = 1;
-                        free(token);
+                        memset(token, 0, sizeof(*token[0]));;
                         WaitingRoom(sockfd, server_addr, renderer, window, currUser);
                         return;
                     }else if(type == ERROR_PACK){

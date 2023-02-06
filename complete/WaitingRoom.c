@@ -252,7 +252,7 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
 void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, CurrentPlayer *currUser, char *buffer, char **token){
     int i, j;
     enum pack_type type;
-    free(token);
+    memset(token, 0, sizeof(*token[0]));;
     token = GetToken(buffer, 3);
     type = (enum pack_type)atoi(token[0]);
     if(type == ROOM_INFO){
@@ -260,7 +260,7 @@ void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, Cur
         roomMax = atoi(token[2]);
         memset(buffer, 0 , sizeof(*buffer));
         ListenToServer(sockfd, server_addr, buffer);
-        free(token);
+        memset(token, 0, sizeof(*token[0]));;
         token = GetToken(buffer, playerCount * 2 + 1);
         type = (enum pack_type)atoi(token[0]);
         if(type == ROOM_INFO){
@@ -452,7 +452,7 @@ void *handleMess(void *argument){
     while(1){ 
         memset(arg->buffer, 0, sizeof(*(arg->buffer)));
         ListenToServer(arg->sockfd, arg->server_addr, arg->buffer);
-        printf("buffer = %s\n", arg->buffer);
+        // printf("buffer = %s\n", arg->buffer);
         arg->type = GetType(arg->buffer);
         if(arg->type == ROOM_INFO){
             isPlayerJoinning = 1;
@@ -502,19 +502,17 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     int i, j;
     pthread_t tid;
     groupChat = calloc(1, sizeof(char *));
-    for(i = 0; i < 300; i++){
+    for(i = 0; i < 50; i++){
         groupChat[i] = calloc(100, sizeof(char));
     }
+    
     Userchat = calloc(MAX_MESSAGE, sizeof(char));
     chatTextBox = calloc(15, sizeof(SDL_Rect));
     for(i = 0; i < 15; i++){
         chatTextBox[i].x = 15;
         chatTextBox[i].y = 265 + 18 * i;
     }
-    char **token = calloc(200, sizeof(char *));
-    for(i = 0; i < 200; i++){
-        token[i] = calloc(MAX_MESSAGE, sizeof(char));
-    } 
+    char **token = makeCleanToken();
     char *SendBuffer = calloc(MAX_MESSAGE ,sizeof(char));
     char *ListenBuffer = calloc(MAX_MESSAGE ,sizeof(char));
     PlayerBox *pBox = calloc(12, sizeof(PlayerBox));
@@ -525,6 +523,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     SDL_Color yellow_color = {255, 255, 0};
     TTF_Font * bloodfont = TTF_OpenFont("bin/font/font.ttf", 40);
     TTF_Font * bloodfont_50 = TTF_OpenFont("bin/font/font.ttf", 50);
+    
     for(i = 0; i < 5; i++){
         Srow[i].text = calloc(MAX_MESSAGE, sizeof(char));
     }
@@ -560,6 +559,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     arg->buffer = ListenBuffer;
     arg->token = token;
     wSurface = IMG_Load("bin/img/ingame.jpg");
+    
 
     pthread_create(&tid, NULL, handleMess, (void *)arg);
 

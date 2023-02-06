@@ -1,5 +1,5 @@
-all :server WerewolfBoardGame
-WerewolfBoardGame: WerewolfBoardGame.c MenuGame.o HostGame.o JoinGame.o WaitingRoom.o client.o pack.o
+all :server game
+game: WerewolfBoardGame.c MenuGame.o HostGame.o JoinGame.o WaitingRoom.o client.o pack.o
 	gcc MenuGame.o HostGame.o JoinGame.o WaitingRoom.o client.o pack.o WerewolfBoardGame.c -I src\include -L src\lib -Wall -pthread -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lws2_32 -lSDL2_image -o WerewolfBoardGame
 MenuGame.o: MenuGame.h MenuGame.c
 	gcc MenuGame.h -I src\include -L src\lib -Wall -pthread -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lws2_32 -lSDL2_image -c MenuGame.c 
