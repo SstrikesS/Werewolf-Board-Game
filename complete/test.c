@@ -89,12 +89,16 @@ int main(){
     //     free(token[i]);
     // }
     // free(token);
-    char *tmp = calloc(100, sizeof(char));
-    strcpy(tmp, "asd");
-    char *tmp2 = calloc(100, sizeof(char));
-    strcpy(tmp2, "16544989461");
-    strncat(tmp, &tmp2[3], 4);
-    printf("%s %d\n", tmp, strlen(tmp));
+    int i;
+    char **tmp = calloc(1, sizeof(char *));
+    for(i = 0; i < 2; i++){
+        tmp[i] = calloc(100, sizeof(char));
+        strcpy(tmp[i], "hello");
+    }
+    for(i = 0; i < 2; i++){
+        memset(tmp[i], 0, sizeof(*tmp[i]));
+    }
+    printf("%s\n", tmp[1]);
     // A *tmp = calloc(1, sizeof(A));
     // tmp->a = 1;
     // A *tmp2 = tmp;

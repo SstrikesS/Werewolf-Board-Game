@@ -19,10 +19,10 @@
 #define PPORT 27016 //default port to get ping
 #define SERVER_IP_ADDR "26.141.211.77" //the ip address of server
 
-#define WEREWOLF 1
-#define WITCH 2
-#define PROTECTER 3
-#define SEER 4
+#define WEREWOLF 2
+#define WITCH 4
+#define PROTECTER 1
+#define SEER 3
 #define HUNTER 5
 #define VILLAGE 6
 #define SPECTATOR 7

@@ -33,3 +33,5 @@ char **GetToken(char *message, int tokenSize);
 
 char **makeCleanToken();
 
+void cleanToken(char **token, int num);
+

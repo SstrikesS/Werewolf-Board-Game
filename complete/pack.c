@@ -59,3 +59,9 @@ char **makeCleanToken(){
     }
     return token;
 }
+void cleanToken(char **token, int num){
+    int i;
+    for(i = 0; i < num; i++){
+        memset(token[i], 0, sizeof(*token[i]));
+    }
+}

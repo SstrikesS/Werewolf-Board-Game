@@ -11,6 +11,7 @@
         "sdl_ttf.h": "c",
         "menugame.h": "c",
         "pthread.h": "c",
-        "joingame.h": "c"
+        "joingame.h": "c",
+        "stdlib.h": "c"
     }
 }
