@@ -14,7 +14,8 @@ enum pack_type{
     ERROR_PACK = 11,// tra lai thong bao loi
     ROOM_INFO = 12,
     START_GAME = 13,
-    PLAYER_TURN = 14
+    PLAYER_TURN = 14,
+    ROLE = 15
 };
 
 

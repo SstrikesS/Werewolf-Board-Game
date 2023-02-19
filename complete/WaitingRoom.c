@@ -472,6 +472,7 @@ void *handleMess(void *argument){
     TTF_Font * bloodfont_40 = TTF_OpenFont("bin/font/font.ttf", 40);
     TTF_Font * bloodfont_25 = TTF_OpenFont("bin/font/font.ttf", 40);
     TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 20);
+    TTF_Font * arialfont_10 = TTF_OpenFont("bin/font/arial.ttf", 10);
     SDL_Color red_color = {255, 0, 0};
     SDL_Color yellow_color = {255, 255, 0};
     printf("[+]Server: %s!\n", arg->buffer);
@@ -571,6 +572,24 @@ void *handleMess(void *argument){
                     SDL_RenderCopy(arg->renderer, texture, NULL, &arg->Srow[4].settingRow);
                 }
             }
+            cleanToken(arg->token, 2);
+        }else if(arg->type == ROLE){
+            printf("In\n");
+            arg->token = GetToken(arg->buffer, 2);
+            for(i = 0; i < 12; i++){
+                if(arg->pBox[i].player_id == atoi(arg->token[1])){
+                    memset(arg->pBox[i].playerRole, 0, sizeof(*arg->pBox[i].playerRole));
+                    strcpy(arg->pBox[i].playerRole, "WereWolf");
+                    SDL_SetRenderDrawColor(arg->renderer, 255, 255, 255, 0);
+                    SDL_RenderFillRect(arg->renderer, &arg->pBox[i].roleRect);
+                    surface = TTF_RenderText_Blended(arialfont_10, arg->pBox[i].playerRole, red_color);
+                    TTF_SizeText(arialfont_10, arg->pBox[i].playerRole, &arg->pBox[i].roleRect.w, &arg->pBox[i].roleRect.h);
+                    texture = SDL_CreateTextureFromSurface(arg->renderer, surface);
+                    SDL_RenderCopy(arg->renderer, texture, NULL, &arg->pBox[i].roleRect);
+                }
+            }
+            SDL_RenderPresent(arg->renderer);
+            cleanToken(arg->token, 2);
         }
     }
     return NULL;

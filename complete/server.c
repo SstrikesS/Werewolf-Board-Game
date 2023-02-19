@@ -315,6 +315,13 @@ void CheckGameStatus(Room *room){// check game sau 1 ngay/ 1 dem
     for(i = 0; i < room->max_client; i++){
         printf("%d -> %d\n", room->player_id[i], client_list[room->player_id[i] - 1].heal);
     }
+    if(room->v <= room->w){
+        printf("[+]Werewolfs win!!!!!!!!!!!\n");
+        return;
+    }else if(room->w == 0){
+        printf("[+]Villages win!!!!!!!!!!!!\n");
+        return;
+    }
     if(room->isNight != 1){
         printf("In\n");
         strcpy(token[0], "NextDay");
@@ -370,7 +377,6 @@ void target(Argument *arg, Client * player1 , Client * player2, int skill){
         case HUNTER:
             printf("[+]Player '%d' hunts player '%d'!\n", player1->id, player2->id);
             player1->target = player2->id;
-            // player2->heal = player2->heal - 2;
             break;
         case SEER:
             printf("[+]Player '%d' saw role of player '%d'!\n", player1->id, player2->id);
@@ -438,35 +444,10 @@ void Night_handle(Argument *arg){
             printf("Hunter's target is %d!\n", client_list[arg->index].target);
         }
         client_list[arg->index].room->currentRole = GOOD_MORNING;
-        // client_list[arg->index].room->isNight = -1;
-        // printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
-        // CheckGameStatus(client_list[arg->index].room);
     }
     cleanToken(token, 3);
     printf("[+]Current role in room '%s' is '%d'!\n", client_list[arg->index].room->room_id, client_list[arg->index].room->currentRole);
     j = 0;
-    
-    // if(client_list[arg->index].room->currentRole == GOOD_MORNING){
-    //     client_list[arg->index].room->isNight = -1;
-    //     for(i = 0; i < client_list[arg->index].room->max_client; i++){
-    //         printf("%d %d\n", client_list[client_list[arg->index].room->player_id[i] - 1].vote_count, (int)(client_list[arg->index].room->current_wolf / 2) + 1);
-    //         if(client_list[client_list[arg->index].room->player_id[i] - 1].vote_count > (int)(client_list[arg->index].room->current_wolf / 2) + 1){
-    //             client_list[client_list[arg->index].room->player_id[i] - 1].heal--;
-    //             printf("IN\n");
-    //         }
-    //     }
-    //     // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-    //     //     strcpy(token[0], "NextDay");
-    //     //     buffer = GetMess(token, 1, PLAYER_TURN);
-    //     //     cleanToken(token, 1);
-    //     //     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-    //     // }
-    //     // free(buffer);
-    //     printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
-    //     CheckGameStatus(client_list[arg->index].room);
-    //     return;
-    // }
-    //printf("AAAAAAAAAAA\n");
     while(j == 0){
         for(i = 0; i < client_list[arg->index].room->max_client; i++){
             if(client_list[client_list[arg->index].room->player_id[i] - 1].role == client_list[arg->index].room->currentRole){
@@ -491,14 +472,6 @@ void Night_handle(Argument *arg){
                     client_list[client_list[arg->index].room->player_id[i] - 1].target = -1;
                 }
             }
-            // client_list[hunter_index].heal -= 2;
-            // printf("Client %d is %d!\n", client_list[hunter_index].id, client_list[hunter_index].heal);
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     strcpy(token[0], "NextDay");
-            //     buffer = GetMess(token, 1, PLAYER_TURN);
-            //     cleanToken(token, 1);
-            //     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-            // }
             printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
             CheckGameStatus(client_list[arg->index].room);
             break;
@@ -695,14 +668,32 @@ void *clientHandle(void *argument){
                 client_list[arg->index].room->playerRole = arr;
             }
             shuffle(client_list[arg->index].room->playerRole, client_list[arg->index].room->client_count);
+            j = -1;
             for(i = 0; i < client_list[arg->index].room->max_client; i++){
+                
+                
+                client_list[client_list[arg->index].room->player_id[i] - 1].role = client_list[arg->index].room->playerRole[i];
+                if(client_list[client_list[arg->index].room->player_id[i] - 1].role == WEREWOLF){
+                    if(j == -1){
+                        j = client_list[arg->index].room->player_id[i];
+                    }else{
+                        sprintf(token[0], "%d", j);
+                        buffer = GetMess(token, 1, ROLE);
+                        cleanToken(token, 1);
+                        sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
+                        sprintf(token[0], "%d", client_list[arg->index].room->player_id[i]);
+                        buffer = GetMess(token, 1, ROLE);
+                        cleanToken(token, 1);
+                        sendToClient(sockfd, client_list[j - 1].client, buffer);
+                    }
+                }
                 memset(buffer, 0, sizeof(*buffer));
                 sprintf(token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
-                client_list[client_list[arg->index].room->player_id[i] - 1].role = client_list[arg->index].room->playerRole[i];
                 buffer = GetMess(token, 1, START_GAME);
                 cleanToken(token, 1);
                 sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
             }
+            j = -1;
             for(i = 0; i < client_list[arg->index].room->max_client; i++){
                 if(client_list[client_list[arg->index].room->player_id[i] - 1].role == PROTECTER){
                     client_list[arg->index].room->currentRole = PROTECTER;
@@ -710,9 +701,10 @@ void *clientHandle(void *argument){
                     buffer = GetMess(token, 1, PLAYER_TURN);
                     cleanToken(token, 1);
                     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-                    break;
+                    break;   
                 }
             }
+            
             client_list[arg->index].room->isStart = 1;
             client_list[arg->index].room->isNight = 1;
         }
