@@ -8,7 +8,7 @@ enum pack_type{
     HOST_GAME = 5, // tao game va setting game hoac list room
     JOIN_GAME = 6, // tin hieu join game
     VOTE = 7, // packet mang thong tin tat ca loai vote cua nguoi choi(vote treo co , vote skip time, ...)
-    PLAYER_TARGET = 8, // chua thong tin phayer target (vd soi taget trungvt, protector bao ve trungvt, seer doan trungvt)
+    PLAYER_TARGET = 8, // chua thong tin player target (vd soi taget trungvt, protector bao ve trungvt, seer doan trungvt)
     PLAYER_DEAD = 9, // cac player dead
     SUCCEED_PACK = 10, // tra lai thong bao thanh cong
     ERROR_PACK = 11,// tra lai thong bao loi
@@ -16,6 +16,8 @@ enum pack_type{
     START_GAME = 13,
     PLAYER_TURN = 14
 };
+
+
 
 typedef struct _CurrentPlayer{
     char *name;

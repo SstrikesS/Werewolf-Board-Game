@@ -137,6 +137,7 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
     jSurface = IMG_Load("bin/img/hostgame.jpg");
     getListBox(renderer, roomlist);
     RenderJoinScreen(renderer);
+    SDL_Delay(500);
     SDL_RenderPresent(renderer);
     
     while(1){
@@ -277,16 +278,13 @@ void JoinGame(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *rende
                     if(row != -1){
                         printf("row = %d and room = %s and player = %s!\n", row, roomlist[row].roomName, currUser->name);
                         memset(buffer, 0, sizeof(*buffer));
-                        printf("%d %d!\n", strlen(token[0]), strlen(token[1]));
                         strcpy(token[0], currUser->name);
                         strcpy(token[1], roomlist[row].roomName);
                         printf("token = %s and %s!\n", token[0], token[1]);
                         buffer = GetMess(token, 2, JOIN_ROOM);
-                        printf("buffer = %s\n", buffer);
                         sendToServer(sockfd, server_addr, buffer);
                         memset(buffer, 0, sizeof(*buffer));
                         ListenToServer(sockfd, server_addr, buffer);
-                        printf("buffer = %s\n", buffer);
                         memset(token, 0, sizeof(*token[0]));
                         token = GetToken(buffer, 2);
                         type = (enum pack_type)atoi(token[0]);

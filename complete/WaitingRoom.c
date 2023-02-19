@@ -5,6 +5,7 @@ int roomMax = 0;
 int isStart = -1;
 int isNight = -1;
 int isYourTurn = -1;
+int isDead = 0;
 int isPlayerJoinning = -1;
 int updateChatBox = -1;
 char **groupChat;
@@ -12,6 +13,8 @@ int maxLine = 0;
 int curr_line = 0;
 int timeout = 0;
 char *Userchat;
+int targetBox = -1;
+int lastBox = -1;
 
 SDL_Surface *wSurface;
 SDL_Rect chatBox = {10, 260, 350, 290};
@@ -47,6 +50,8 @@ typedef struct _PlayerBox{
     SDL_Rect playerImG;
     char *playername;
     int player_id;
+    char *img_link;
+    int isDead;
 }PlayerBox;
 
 typedef struct _Arg{
@@ -62,6 +67,7 @@ typedef struct _Arg{
     int timeout;
 }Arg;
 
+PlayerBox *currBox;
 SDL_Rect ChatField = {10, 555, 350, 43};
 SDL_Rect TextField = {15, 557, 330, 30};
 SDL_Rect ButtonBack = {0, 0, 0, 0};
@@ -111,7 +117,6 @@ void *time_countdown(void *argument){
     SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
     do{
         SDL_Delay(1000);
-        // printf("%d\n", arg->timeout);
         memset(timetext, 0, sizeof( *timetext));
         
         if(arg->timeout >= 10){
@@ -123,8 +128,9 @@ void *time_countdown(void *argument){
             strcat(timetext, tmp);
             sur = TTF_RenderText_Blended(font, timetext, red_color);
         }
-            texture = SDL_CreateTextureFromSurface(arg->renderer, sur);
+        SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
         SDL_RenderFillRect(arg->renderer, &ClockRect);
+        texture = SDL_CreateTextureFromSurface(arg->renderer, sur);
         SDL_RenderCopy(arg->renderer, texture, NULL, &ClockText);
         SDL_RenderPresent(arg->renderer);
         arg->timeout--;
@@ -135,17 +141,23 @@ void *time_countdown(void *argument){
     TTF_SizeText(font_25, "Waiting for other players!", &NotiText.w, &NotiText.h);
     texture = SDL_CreateTextureFromSurface(arg->renderer, sur);    
     SDL_RenderCopy(arg->renderer, texture, NULL, &NotiText);
-    char *buffer = calloc(3, sizeof(char));
-    sprintf(arg->token[0], "%d",arg->currUser->id);
-    buffer = GetMess(arg->token, 1, PLAYER_TURN);
-    cleanToken(arg->token, 1);
+    SDL_RenderPresent(arg->renderer);
+    if(strlen(arg->token[0]) == 0){
+        strcpy(arg->token[0], "-1");
+        strcpy(arg->token[1], "0");
+    }
+    char *buffer = calloc(10, sizeof(char));
+    buffer = GetMess(arg->token, 2, PLAYER_TARGET);
+    cleanToken(arg->token, 2);
     sendToServer(arg->sockfd, arg->server_addr, buffer);
+    free(buffer);
     return NULL;
 }
 
 void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow, Arg *arg){
     TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 20);
     TTF_Font * bloodfont_50 = TTF_OpenFont("bin/font/font.ttf", 50);
+    TTF_Font * arialfont_10 = TTF_OpenFont("bin/font/arial.ttf", 10);
     SDL_Color red_color = {255, 0, 0};
     int i;
     SDL_Surface *sur = NULL;
@@ -170,6 +182,7 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
 
         strcat(Srow[3].text, "WereWolf");
+        strcpy(currBox->playerRole, "WereWolf");
         VoteRect.x = 850;
         break;
     case WITCH:
@@ -187,6 +200,7 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         texture = SDL_CreateTextureFromSurface(renderer, sur);
         SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
         strcat(Srow[3].text, "Witch");
+        strcpy(currBox->playerRole, "Witch");
         break;
     case PROTECTER:
         strcpy(skill_1 , "Protect");
@@ -196,6 +210,7 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         texture = SDL_CreateTextureFromSurface(renderer, sur);
         SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
         strcat(Srow[3].text, "Protecter");
+        strcpy(currBox->playerRole, "Protecter");
         VoteRect.x = 850;
         break;
     case SEER:
@@ -206,6 +221,7 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         texture = SDL_CreateTextureFromSurface(renderer, sur);
         SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
         strcat(Srow[3].text, "Seer");
+        strcpy(currBox->playerRole, "Seer");
         VoteRect.x = 850;
         break;
     case HUNTER:
@@ -215,7 +231,8 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         TTF_SizeText(bloodfont_50, skill_1, &Skill_1Rect.w, &Skill_1Rect.h);
         texture = SDL_CreateTextureFromSurface(renderer, sur);
         SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
-        strcat(Srow[3].text, "Seer");
+        strcat(Srow[3].text, "Hunter");
+        strcpy(currBox->playerRole, "Hunter");
         VoteRect.x = 850;
         break;
     case VILLAGE:
@@ -233,10 +250,17 @@ void UpdateUI(SDL_Renderer* renderer, CurrentPlayer *currUser, SettingRow *Srow,
         texture = SDL_CreateTextureFromSurface(renderer, sur);
         SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
         strcat(Srow[3].text, "Village");
+        strcpy(currBox->playerRole, "Village");
         break;
     default:
         break;
     }
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderFillRect(renderer, &currBox->roleRect);
+    sur = TTF_RenderText_Blended(arialfont, currBox->playerRole, red_color);
+    TTF_SizeText(arialfont_10, currBox->playerRole, &currBox->roleRect.w, &currBox->roleRect.h);
+    texture = SDL_CreateTextureFromSurface(renderer, sur);
+    SDL_RenderCopy(renderer, texture, NULL, &currBox->roleRect);
 
     sur = TTF_RenderText_Blended(bloodfont_50, vote, red_color);
     TTF_SizeText(bloodfont_50, vote, &VoteRect.w, &VoteRect.h);
@@ -283,6 +307,7 @@ void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, Cur
             for(i = 0; i < playerCount; i++){
                 pBox[i].player_id = atoi(token[j++]);
                 if(pBox[i].player_id == currUser->id){
+                    currBox = &pBox[i];
                     strcpy(pBox[i].playername, "You");
                     j++;
                 }else{
@@ -290,16 +315,12 @@ void GetRoom(SOCKET sockfd, struct sockaddr_in server_addr, PlayerBox *pBox, Cur
                 }
             }
         }
-        cleanToken(token, playerCount *2 + 1);
+        cleanToken(token, playerCount * 2 + 1);
     }
 }
 
-
-
 void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currUser, SettingRow *Srow){
     int i;
-    char *img_link = calloc(100 ,sizeof(char));
-    char *num = calloc(4, sizeof(char));
     SDL_FillRect(wSurface, &listBox, SDL_MapRGB(wSurface->format, 0, 0, 0));
     SDL_Surface *sur;
     TTF_Font * arialfont_10 = TTF_OpenFont("bin/font/arial.ttf", 10);
@@ -307,13 +328,7 @@ void GetPlayerList(SDL_Renderer *renderer, PlayerBox *pBox, CurrentPlayer *currU
     SDL_Color red_color = {255, 0, 0};
     for(i = 0; i < 12; i++){
         if(pBox[i].player_id != -1){
-            memset(img_link, 0 ,sizeof(*img_link));
-            memset(num, 0 ,sizeof(*num));
-            strcat(img_link, "bin/img/pos");
-            sprintf(num, "%d", i + 1);
-            strcat(img_link, num);
-            strcat(img_link, ".jpg");
-            sur = IMG_Load(img_link);
+            sur = IMG_Load(pBox[i].img_link);
             SDL_FillRect(wSurface, &pBox[i].pos, SDL_MapRGB(wSurface->format, 255, 255, 255));
             SDL_BlitSurface(sur, NULL, wSurface, &pBox[i].playerImG);
             rendertext(renderer, arialfont_10, pBox[i].playername, red_color, &pBox[i].nameRect);
@@ -451,14 +466,18 @@ void *handleMess(void *argument){
     pthread_detach(pthread_self());
     Arg *arg = (Arg *)argument;
     pthread_t tid;
+    int i;
     SDL_Surface *surface = NULL;
     SDL_Texture *texture = NULL;
+    TTF_Font * bloodfont_40 = TTF_OpenFont("bin/font/font.ttf", 40);
     TTF_Font * bloodfont_25 = TTF_OpenFont("bin/font/font.ttf", 40);
+    TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 20);
+    SDL_Color red_color = {255, 0, 0};
     SDL_Color yellow_color = {255, 255, 0};
+    printf("[+]Server: %s!\n", arg->buffer);
     while(1){ 
         memset(arg->buffer, 0, sizeof(*(arg->buffer)));
         ListenToServer(arg->sockfd, arg->server_addr, arg->buffer);
-        // printf("buffer = %s\n", arg->buffer);
         arg->type = GetType(arg->buffer);
         if(arg->type == ROOM_INFO){
             isPlayerJoinning = 1;
@@ -475,7 +494,7 @@ void *handleMess(void *argument){
         }else if(arg->type == START_GAME){
             arg->token = GetToken(arg->buffer, 2);
             arg->currUser->role = atoi(arg->token[1]);
-            printf("Your role = %d\n", (int)arg->currUser->role);
+            printf("[+]Your role = %d\n", (int)arg->currUser->role);
             cleanToken(arg->token, 2);
             isStart = 1;
         }
@@ -484,16 +503,74 @@ void *handleMess(void *argument){
             arg->currUser->isHost = 1;
             GetButton(arg->renderer, arg->currUser);
         }else if(arg->type == PLAYER_TURN){
-            cleanToken(arg->token , 1);
-            isYourTurn = 1;
-            SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
-            SDL_RenderFillRect(arg->renderer, &NotiRect);
-            surface = TTF_RenderText_Blended(bloodfont_25, "Your Turn!", yellow_color);
-            TTF_SizeText(bloodfont_25, "Your turn!", &NotiText.w, &NotiText.h);
-            texture = SDL_CreateTextureFromSurface(arg->renderer, surface);    
-            SDL_RenderCopy(arg->renderer, texture, NULL, &NotiText);
-            arg->timeout = 30;
-            pthread_create(&tid, NULL, time_countdown, (void *)arg);
+            arg->token = GetToken(arg->buffer, 2);
+            if(strcmp(arg->token[1], "Night") == 0){
+                cleanToken(arg->token , 1);
+                isYourTurn = 1;
+                printf("[+]Your turn\n");
+                SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+                SDL_RenderFillRect(arg->renderer, &NotiRect);
+                surface = TTF_RenderText_Blended(bloodfont_40, "Your Turn!", yellow_color);
+                TTF_SizeText(bloodfont_40, "Your turn!", &NotiText.w, &NotiText.h);
+                texture = SDL_CreateTextureFromSurface(arg->renderer, surface);    
+                SDL_RenderCopy(arg->renderer, texture, NULL, &NotiText);
+                strcpy(arg->Srow[2].text, "Time: Night");
+                SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+                SDL_RenderFillRect(arg->renderer, &arg->Srow[2].settingRow);
+                surface = TTF_RenderText_Blended(arialfont, arg->Srow[2].text, red_color);
+                TTF_SizeText(arialfont, arg->Srow[2].text, &arg->Srow[2].settingRow.w, &arg->Srow[2].settingRow.h);
+                texture = SDL_CreateTextureFromSurface(arg->renderer, surface);
+                SDL_RenderCopy(arg->renderer, texture, NULL, &arg->Srow[2].settingRow);
+                SDL_RenderPresent(arg->renderer);
+                arg->timeout = 30;
+                pthread_create(&tid, NULL, time_countdown, (void *)arg);
+            }else if(strcmp(arg->token[1], "NextDay") == 0){
+                isNight = -1;
+                strcpy(arg->Srow[2].text, "Time: Day");
+                SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+                SDL_RenderFillRect(arg->renderer, &arg->Srow[2].settingRow);
+                surface = TTF_RenderText_Blended(arialfont, arg->Srow[2].text, red_color);
+                TTF_SizeText(arialfont, arg->Srow[2].text, &arg->Srow[2].settingRow.w, &arg->Srow[2].settingRow.h);
+                texture = SDL_CreateTextureFromSurface(arg->renderer, surface);
+                SDL_RenderCopy(arg->renderer, texture, NULL, &arg->Srow[2].settingRow);
+                arg->timeout = 30;
+                if(isDead == 0){
+                    printf("In3");
+                    isYourTurn = 1;
+                    SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+                    SDL_RenderFillRect(arg->renderer, &NotiRect);
+                    surface = TTF_RenderText_Blended(bloodfont_25, "Discussion time!", red_color);
+                    TTF_SizeText(bloodfont_25, "Discussion time!", &NotiText.w, &NotiText.h);
+                    texture = SDL_CreateTextureFromSurface(arg->renderer, surface);    
+                    SDL_RenderCopy(arg->renderer, texture, NULL, &NotiText);
+                    arg->timeout = 90;
+                    pthread_create(&tid, NULL, time_countdown, (void *)arg);
+                }
+                SDL_RenderPresent(arg->renderer);
+            }
+        }else if(arg->type == PLAYER_DEAD){
+            arg->token = GetToken(arg->buffer, 2);
+            for(i = 0; i < 12; i++){
+                if(arg->pBox[i].player_id == atoi(arg->token[1])){
+                    SDL_SetRenderDrawColor(arg->renderer, 0, 255, 255, 0);
+                    SDL_RenderFillRect(arg->renderer, &arg->pBox[i].pos);
+                    SDL_RenderPresent(arg->renderer);
+                    arg->pBox[i].isDead = 1;
+                    arg->timeout = 0;
+                    break;
+                }
+                if(atoi(arg->token[1]) == arg->currUser->id){
+                    isDead = 1;
+                    arg->currUser->role = 7;
+                    strcpy(arg->Srow[4].text, "Your status: Dead");
+                    SDL_SetRenderDrawColor(arg->renderer, 0, 0, 0, 0);
+                    SDL_RenderFillRect(arg->renderer, &arg->Srow[4].settingRow);
+                    surface = TTF_RenderText_Blended(arialfont, arg->Srow[4].text, red_color);
+                    TTF_SizeText(arialfont, arg->Srow[4].text, &arg->Srow[4].settingRow.w, &arg->Srow[4].settingRow.h);
+                    texture = SDL_CreateTextureFromSurface(arg->renderer, surface);
+                    SDL_RenderCopy(arg->renderer, texture, NULL, &arg->Srow[4].settingRow);
+                }
+            }
         }
     }
     return NULL;
@@ -508,7 +585,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     for(i = 0; i < 50; i++){
         groupChat[i] = calloc(100, sizeof(char));
     }
-    
+    char *num = calloc(4, sizeof(char));
     Userchat = calloc(MAX_MESSAGE, sizeof(char));
     chatTextBox = calloc(15, sizeof(SDL_Rect));
     for(i = 0; i < 15; i++){
@@ -526,7 +603,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     SDL_Color yellow_color = {255, 255, 0};
     TTF_Font * bloodfont = TTF_OpenFont("bin/font/font.ttf", 40);
     TTF_Font * bloodfont_50 = TTF_OpenFont("bin/font/font.ttf", 50);
-    
+    TTF_Font * arialfont = TTF_OpenFont("bin/font/arial.ttf", 10);
     for(i = 0; i < 5; i++){
         Srow[i].text = calloc(MAX_MESSAGE, sizeof(char));
     }
@@ -536,6 +613,14 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
         pBox[i].playername = calloc(MAX_NAME, sizeof(char));
         strcpy(pBox[i].playerRole, "???");
         pBox[i].player_id = -1;
+        pBox[i].isDead = 0;
+        pBox[i].img_link = calloc(100, sizeof(char));
+
+        memset(num, 0 ,sizeof(*num));
+        strcat(pBox[i].img_link, "bin/img/pos");
+        sprintf(num, "%d", i + 1);
+        strcat(pBox[i].img_link, num);
+        strcat(pBox[i].img_link, ".jpg");
 
         pBox[i].pos.w = 80; 
         pBox[i].nameRect.w = pBox[i].roleRect.w = pBox[i].playerImG.w = 70;
@@ -562,7 +647,6 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
     arg->buffer = ListenBuffer;
     arg->token = token;
     wSurface = IMG_Load("bin/img/ingame.jpg");
-    
 
     pthread_create(&tid, NULL, handleMess, (void *)arg);
 
@@ -675,7 +759,7 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                     SendBuffer = GetMess(token , 0, START_GAME);
                     sendToServer(sockfd, server_addr, SendBuffer);           
                 }
-                if(check_mouse_pos(ButtonBack) == 1  && isStart == -1){
+                if(check_mouse_pos(ButtonBack) == 1  && isDead == 1){
                     free(groupChat);
                     free(Userchat);
                     SDL_FreeSurface(wSurface);
@@ -697,13 +781,159 @@ void WaitingRoom(SOCKET sockfd, struct sockaddr_in server_addr, SDL_Renderer *re
                     currUser->id = -1;
                     return;
                 }
-                if(check_mouse_pos(SkipRect) == 1 && isNight == 1 && isStart > 0 && isYourTurn == 1){
-                    arg->timeout = 0;
-                    isYourTurn = -1;
+                if(check_mouse_pos(SkipRect) == 1 && isStart > 0 && isYourTurn == 1 && isDead == 0){
+                    strcpy(token[0], "-1");
+                    strcpy(token[1], "0");
                     surface = TTF_RenderText_Blended(bloodfont_50, "Skip", red_color);
                     texture = SDL_CreateTextureFromSurface(renderer, surface);    
                     SDL_RenderCopy(renderer, texture, NULL, &SkipRect);
+                    arg->timeout = 0;
+                    isYourTurn = -1;
                 }
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                for(i = 0; i < 12; i++){
+                    if(check_mouse_pos(pBox[i].pos) == 1 && pBox[i].player_id != -1 && pBox[i].isDead == 0){
+                        if(targetBox == pBox[i].player_id){
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            targetBox = -1;
+                            lastBox = -1;
+                        }else if(targetBox != -1){
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            SDL_RenderFillRect(renderer, &pBox[lastBox].pos);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playername, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playername, &pBox[lastBox].nameRect.w, &pBox[lastBox].nameRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].nameRect);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playerRole, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playerRole, &pBox[lastBox].roleRect.w, &pBox[lastBox].roleRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].roleRect);
+
+                            surface = IMG_Load(pBox[lastBox].img_link);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].playerImG);
+                            targetBox = pBox[i].player_id;
+                            lastBox = i;
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+                        }else{
+                            targetBox = pBox[i].player_id;
+                            lastBox = i;
+                            SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);
+                        }
+                        SDL_RenderFillRect(renderer, &pBox[i].pos);
+
+                        surface = TTF_RenderText_Blended(arialfont, pBox[i].playername, red_color);
+                        TTF_SizeText(arialfont, pBox[i].playername, &pBox[i].nameRect.w, &pBox[i].nameRect.h);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);
+                        SDL_RenderCopy(renderer, texture, NULL, &pBox[i].nameRect);
+
+                        surface = TTF_RenderText_Blended(arialfont, pBox[i].playerRole, red_color);
+                        TTF_SizeText(arialfont, pBox[i].playerRole, &pBox[i].roleRect.w, &pBox[i].roleRect.h);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);
+                        SDL_RenderCopy(renderer, texture, NULL, &pBox[i].roleRect);
+
+                        surface = IMG_Load(pBox[i].img_link);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);
+                        SDL_RenderCopy(renderer, texture, NULL, &pBox[i].playerImG);
+                    }
+                }
+                if(isYourTurn == 1 && isStart > 0 && isNight == 1){
+                    if(check_mouse_pos(Skill_1Rect) == 1){
+                        sprintf(arg->token[0], "%d", targetBox);
+                        strcpy(arg->token[1], "1");
+                        surface = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+                        arg->timeout = 0;
+                        isYourTurn = -1;
+                        targetBox = -1;
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            SDL_RenderFillRect(renderer, &pBox[lastBox].pos);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playername, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playername, &pBox[lastBox].nameRect.w, &pBox[lastBox].nameRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].nameRect);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playerRole, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playerRole, &pBox[lastBox].roleRect.w, &pBox[lastBox].roleRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].roleRect);
+
+                            surface = IMG_Load(pBox[lastBox].img_link);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].playerImG);
+                        lastBox = -1;
+                    }else if(check_mouse_pos(Skill_2Rect) == 1 && currUser->role == WITCH){
+                        sprintf(arg->token[0], "%d", targetBox);
+                        strcpy(arg->token[1], "-1");
+                        surface = TTF_RenderText_Blended(bloodfont_50, skill_2, red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &Skill_2Rect);
+                        arg->timeout = 0;
+                        isYourTurn = -1;
+                        targetBox = -1;
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            SDL_RenderFillRect(renderer, &pBox[lastBox].pos);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playername, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playername, &pBox[lastBox].nameRect.w, &pBox[lastBox].nameRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].nameRect);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playerRole, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playerRole, &pBox[lastBox].roleRect.w, &pBox[lastBox].roleRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].roleRect);
+
+                            surface = IMG_Load(pBox[lastBox].img_link);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].playerImG);
+                        lastBox = -1;
+                    }
+                    
+                    // else if(check_mouse_pos(VoteRect) == 1 && isNight == -1){
+                    //     sprintf(token[0], "%d", targetBox);
+                    //     strcpy(token[1], "0");
+                    //     surface = TTF_RenderText_Blended(bloodfont_50, "Vote", red_color);
+                    //     texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                    //     SDL_RenderCopy(renderer, texture, NULL, &VoteRect);
+                    //     arg->timeout = 0;
+                    //     isYourTurn = -1;
+                    // }
+                }
+                if(isYourTurn == 1 && isStart > 0 && isNight != 1){
+                    if(check_mouse_pos(VoteRect) == 1){
+                        sprintf(arg->token[0], "%d", targetBox);
+                        strcpy(arg->token[1], "1");
+                        surface = TTF_RenderText_Blended(bloodfont_50, skill_1, red_color);
+                        texture = SDL_CreateTextureFromSurface(renderer, surface);    
+                        SDL_RenderCopy(renderer, texture, NULL, &Skill_1Rect);
+                        arg->timeout = 0;
+                        isYourTurn = -1;
+                        targetBox = -1;
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                            SDL_RenderFillRect(renderer, &pBox[lastBox].pos);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playername, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playername, &pBox[lastBox].nameRect.w, &pBox[lastBox].nameRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].nameRect);
+
+                            surface = TTF_RenderText_Blended(arialfont, pBox[lastBox].playerRole, red_color);
+                            TTF_SizeText(arialfont, pBox[lastBox].playerRole, &pBox[lastBox].roleRect.w, &pBox[lastBox].roleRect.h);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].roleRect);
+
+                            surface = IMG_Load(pBox[lastBox].img_link);
+                            texture = SDL_CreateTextureFromSurface(renderer, surface);
+                            SDL_RenderCopy(renderer, texture, NULL, &pBox[lastBox].playerImG);
+                        lastBox = -1;
+                    }
+                }
+                SDL_RenderPresent(renderer);
                 break;
             case SDL_MOUSEWHEEL:
                 if(check_mouse_pos(chatBox) == 1){

@@ -6,11 +6,10 @@
 #define CLIENT_TIMEOUT 4
 #define MAX_CLIENT 100 //Max clients can connect to server
 int validRoom = 0;
-
+int count = 0;
 typedef struct Argument{
 	int index;
 	char* message;
-    char **token;
     struct sockaddr_in client;
 }Argument;
 
@@ -22,7 +21,10 @@ typedef struct Room{
 	int client_count;
     int isStart;
     int isNight;
+    int w;
+    int v;
     int currentRole;
+    int current_wolf;
 }Room;
 
 typedef struct Client{
@@ -33,6 +35,9 @@ typedef struct Client{
 	Room *room;
 	int host;
     int timeout;
+    int heal;
+    int vote_count;
+    int target;
 }Client;
 
 // local variable
@@ -42,6 +47,8 @@ SOCKET pingfd;
 struct sockaddr_in server_addr, client_addr, ping_addr;
 Client *client_list;
 Room *room_list;
+
+char **token;
 
 int setupServer(){ 
     WSADATA wsa;
@@ -136,6 +143,10 @@ int checkEmptyRoom(Room *room){
         printf("[+]Room '%s' has been removed!\n", room->room_id);
         memset(room->player_id, 0 , sizeof(*room->player_id));
         room->max_client = -1;
+        room->isNight = -1;
+        room->isStart = -1;
+        room->currentRole = -1;
+        //memset(room->playerRole, 0 ,sizeof(*room->playerRole));
         memset(room->room_id, 0, sizeof(*room->room_id));
         return 0;
     }
@@ -143,7 +154,7 @@ int checkEmptyRoom(Room *room){
     return 1;
 }
 
-void GetRoom(int index, char **token){
+void GetRoom(int index){
     int i, j;
     char *buffer = calloc(MAX_MESSAGE, sizeof(char));
     sprintf(token[0], "%d",client_list[index].room->client_count);
@@ -178,7 +189,7 @@ void removePlayer(Room *room, int player_id){
     }
 }
 
-void removeClient(int index, char **token){
+void removeClient(int index){
     int i;
     if(client_list[index].id != -1){
         if(client_list[index].room != NULL){
@@ -200,7 +211,7 @@ void removeClient(int index, char **token){
                 }
                 for(i = 0; i < client_list[index].room->max_client; i++){
                     if(client_list[index].room->player_id[i] != 0){
-                        GetRoom(client_list[index].room->player_id[i] - 1, token);
+                        GetRoom(client_list[index].room->player_id[i] - 1);
                         printf("[+]Sent to other player(s)!\n");
                     }
                 }
@@ -258,10 +269,266 @@ void *timeoutClient(void *argument){
         Sleep(1000);
         client_list[arg->index].timeout--;
     }while (client_list[arg->index].timeout > 0);
-    removeClient(arg->index, arg->token);
+    removeClient(arg->index);
     return NULL;
 }
 
+int isDead(int index){// kiem tra player chet chua
+    if(client_list[index].heal <= 0){
+        return DEAD;
+    }else{
+        return ALIVE;
+    }
+}
+
+void CheckGameStatus(Room *room){// check game sau 1 ngay/ 1 dem
+    printf("Checking!!!!\n");
+    char *buffer = calloc(10, sizeof(char));
+    int i, j;
+    for(i = 0; i < room->max_client; i++){
+        if(room->player_id[i] > 0){
+            printf("heal = %d\n",client_list[room->player_id[i] - 1].heal);
+            if(isDead(room->player_id[i] - 1) == DEAD){
+                printf("[+]Player '%s' with id '%d' is eliminated in room '%s'!\n", client_list[room->player_id[i] - 1].name, client_list[room->player_id[i] - 1].id, room->room_id);
+                if(client_list[room->player_id[i] - 1].role == WEREWOLF){
+                    room->w--; //so luong soi giam
+                }else{
+                    room->v--; //so luong nguoi giam
+                }
+                client_list[room->player_id[i] - 1].role = SPECTATOR;// chuyen role
+                sprintf(token[0], "%d", room->player_id[i]);
+                buffer = GetMess(token, 1, PLAYER_DEAD);
+                cleanToken(token, 1);
+                for(j = 0; j < room->max_client; j++){
+                    sendToClient(sockfd, client_list[room->player_id[j] - 1].client, buffer);
+                }
+            }
+        }
+    }
+    //Note: Sau moi dem phai reset mau(player.heal) ve 1 neu player do con song(ALIVE)
+    for(i = 0; i < room->max_client; i++){
+        if(client_list[room->player_id[i] - 1].role != SPECTATOR){
+            client_list[room->player_id[i] - 1].heal = 1;
+            client_list[room->player_id[i] - 1].vote_count = 0;
+        }
+    }
+    for(i = 0; i < room->max_client; i++){
+        printf("%d -> %d\n", room->player_id[i], client_list[room->player_id[i] - 1].heal);
+    }
+    if(room->isNight != 1){
+        printf("In\n");
+        strcpy(token[0], "NextDay");
+        buffer = GetMess(token, 1, PLAYER_TURN);
+        cleanToken(token, 1);
+        for(i = 0; i < room->max_client; i++){
+            sendToClient(sockfd, client_list[room->player_id[i] - 1].client, buffer);
+        }
+    }else if(room->isNight == 1){
+        int j = 0;
+        printf("In2");
+        while(j == 0){
+            for(i = 0; i < room->max_client; i++){
+                if(client_list[room->player_id[i] - 1].role == room->currentRole){
+                    j++;
+                    strcpy(token[0] , "Night");
+                    buffer = GetMess(token, 1, PLAYER_TURN);
+                    cleanToken(token, 1);
+                    sendToClient(sockfd, client_list[room->player_id[i] - 1].client, buffer);
+                }
+            }
+            if(j == 0){
+                room->currentRole++;
+                printf("[+]Current role in room '%s' is '%d'!\n", room->room_id, room->currentRole);
+            }
+        }
+    }
+    printf("End check!!!!\n");
+}
+
+void target(Argument *arg, Client * player1 , Client * player2, int skill){
+    char *buffer = calloc(4, sizeof(char));
+    switch (player1->role){
+        case WEREWOLF:
+            printf("[+]Player '%d' votes kill player '%d'!\n", player1->id, player2->id);
+            player2->vote_count++; // bi can mat 1 mau
+            break;
+        case WITCH:
+            if(skill == WITCH_PROTECT){
+                printf("[+]Player '%d' throws protect potion to player '%d'!\n", player1->id, player2->id);
+                player2->heal++;
+            }else if(skill == WITCH_POISION){
+                printf("[+]Player '%d' throws poison to player '%d'!\n", player1->id, player2->id);
+                player2->heal -= 2;
+            }
+            break;
+        case PROTECTER:
+            printf("[+]Player '%d' protects player '%d'!\n", player1->id, player2->id);
+            player2->heal = player2->heal + 1;
+            //printf("%d\n" , player2->heal);
+            //printf("this is protector\n");
+            break;
+        case HUNTER:
+            printf("[+]Player '%d' hunts player '%d'!\n", player1->id, player2->id);
+            player1->target = player2->id;
+            // player2->heal = player2->heal - 2;
+            break;
+        case SEER:
+            printf("[+]Player '%d' saw role of player '%d'!\n", player1->id, player2->id);
+            if(player2->role == WEREWOLF){
+                sprintf(token[0], "%d", WEREWOLF);
+                buffer = GetMess(token, 1, PLAYER_TARGET);
+                sendToClient(sockfd, client_list[arg->index].client, buffer);
+            }else{
+                sprintf(token[0], "%d", VILLAGE);
+                buffer = GetMess(token, 1, PLAYER_TARGET);
+                sendToClient(sockfd, client_list[arg->index].client, buffer);
+            }
+            cleanToken(token , 1);
+            break;
+        default:
+            break;
+    }
+    free(buffer);
+}
+
+void Night_handle(Argument *arg){
+    char *buffer = calloc(100, sizeof(char*));
+    int i, j;
+    if(client_list[arg->index].room->currentRole == PROTECTER){
+        client_list[arg->index].room->currentRole = WEREWOLF;
+        if(atoi(token[1]) >= 0){
+            target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+        }
+    }
+    else if(client_list[arg->index].room->currentRole == WEREWOLF){
+        client_list[arg->index].room->current_wolf++;
+        if(client_list[arg->index].room->current_wolf < client_list[arg->index].room->w){
+            if(atoi(token[1]) >= 0){
+                target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+            }
+            return;
+        }
+        if(client_list[arg->index].room->current_wolf == client_list[arg->index].room->w){
+            if(atoi(token[1]) >= 0){
+                target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+            }   
+            client_list[arg->index].room->currentRole = SEER;
+            client_list[arg->index].room->current_wolf = 0;
+        }
+    }else if(client_list[arg->index].room->currentRole == SEER){
+        if(client_list[arg->index].room->max_client >= 11){
+            if(atoi(token[1]) >= 0){
+                target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+            }
+            client_list[arg->index].room->currentRole = WITCH;
+        }else{
+            if(atoi(token[1]) >= 0){
+                target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+            }
+            client_list[arg->index].room->currentRole = HUNTER;
+        }
+    }else if(client_list[arg->index].room->currentRole == WITCH){
+        if(atoi(token[1]) >= 0){
+            target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+        }
+        client_list[arg->index].room->currentRole = HUNTER;
+    }else if(client_list[arg->index].room->currentRole == HUNTER){
+        if(atoi(token[1]) >= 0){
+            target(arg , &client_list[arg->index], &client_list[atoi(token[1]) - 1], atoi(token[2]));
+            printf("Hunter's target is %d!\n", client_list[arg->index].target);
+        }
+        client_list[arg->index].room->currentRole = GOOD_MORNING;
+        // client_list[arg->index].room->isNight = -1;
+        // printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
+        // CheckGameStatus(client_list[arg->index].room);
+    }
+    cleanToken(token, 3);
+    printf("[+]Current role in room '%s' is '%d'!\n", client_list[arg->index].room->room_id, client_list[arg->index].room->currentRole);
+    j = 0;
+    
+    // if(client_list[arg->index].room->currentRole == GOOD_MORNING){
+    //     client_list[arg->index].room->isNight = -1;
+    //     for(i = 0; i < client_list[arg->index].room->max_client; i++){
+    //         printf("%d %d\n", client_list[client_list[arg->index].room->player_id[i] - 1].vote_count, (int)(client_list[arg->index].room->current_wolf / 2) + 1);
+    //         if(client_list[client_list[arg->index].room->player_id[i] - 1].vote_count > (int)(client_list[arg->index].room->current_wolf / 2) + 1){
+    //             client_list[client_list[arg->index].room->player_id[i] - 1].heal--;
+    //             printf("IN\n");
+    //         }
+    //     }
+    //     // for(i = 0; i < client_list[arg->index].room->max_client; i++){
+    //     //     strcpy(token[0], "NextDay");
+    //     //     buffer = GetMess(token, 1, PLAYER_TURN);
+    //     //     cleanToken(token, 1);
+    //     //     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
+    //     // }
+    //     // free(buffer);
+    //     printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
+    //     CheckGameStatus(client_list[arg->index].room);
+    //     return;
+    // }
+    //printf("AAAAAAAAAAA\n");
+    while(j == 0){
+        for(i = 0; i < client_list[arg->index].room->max_client; i++){
+            if(client_list[client_list[arg->index].room->player_id[i] - 1].role == client_list[arg->index].room->currentRole){
+                j++;
+                strcpy(token[0] , "Night");
+                buffer = GetMess(token, 1, PLAYER_TURN);
+                cleanToken(token, 1);
+                sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
+            }
+        }
+        if(client_list[arg->index].room->currentRole == GOOD_MORNING){
+            client_list[arg->index].room->isNight = -1;
+            for(i = 0; i < client_list[arg->index].room->max_client; i++){
+                if(client_list[client_list[arg->index].room->player_id[i] - 1].vote_count > (int)(client_list[arg->index].room->current_wolf / 2) + 1){
+                    client_list[client_list[arg->index].room->player_id[i] - 1].heal--;
+                }
+            }
+            for(i = 0; i < client_list[arg->index].room->max_client; i++){
+                if(client_list[client_list[arg->index].room->player_id[i] - 1].role == HUNTER && client_list[client_list[arg->index].room->player_id[i] - 1].target != -1 && client_list[client_list[arg->index].room->player_id[i] - 1].heal <= 0){
+                    printf("i'm here!\n");
+                    client_list[client_list[client_list[arg->index].room->player_id[i] - 1].target - 1].heal -= 2;
+                    client_list[client_list[arg->index].room->player_id[i] - 1].target = -1;
+                }
+            }
+            // client_list[hunter_index].heal -= 2;
+            // printf("Client %d is %d!\n", client_list[hunter_index].id, client_list[hunter_index].heal);
+            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
+            //     strcpy(token[0], "NextDay");
+            //     buffer = GetMess(token, 1, PLAYER_TURN);
+            //     cleanToken(token, 1);
+            //     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
+            // }
+            printf("[+]Room '%s' GoodMoring!\n", client_list[arg->index].room->room_id);
+            CheckGameStatus(client_list[arg->index].room);
+            break;
+        }
+        if(j == 0){
+            client_list[arg->index].room->currentRole++;
+            printf("[+]Current role in room '%s' is '%d'!\n", client_list[arg->index].room->room_id, client_list[arg->index].room->currentRole);
+        }
+    }
+    free(buffer);
+}
+
+void Day_handle(Argument *arg){
+    int i;
+    count++;
+    if(atoi(token[1]) >= 0){
+        client_list[atoi(token[1]) - 1].vote_count++;
+    }
+    if(count == client_list[arg->index].room->v + client_list[arg->index].room->w){
+        for(i = 0; i < client_list[arg->index].room->max_client; i++){
+            if(client_list[client_list[arg->index].room->player_id[i] - 1].vote_count > (int)((client_list[arg->index].room->w + client_list[arg->index].room->v) / 2) + 1){
+                client_list[client_list[arg->index].room->player_id[i] - 1].heal--;
+            }
+        }
+        printf("[+]Room '%s' GoodNight!\n", client_list[arg->index].room->room_id);
+        client_list[arg->index].room->isNight = 1;
+        client_list[arg->index].room->currentRole = PROTECTER;
+        CheckGameStatus(client_list[arg->index].room);
+    }
+}
 void *clientHandle(void *argument){
     pthread_detach(pthread_self());
     int i, j = -1;
@@ -270,43 +537,44 @@ void *clientHandle(void *argument){
     char *buffer = calloc(MAX_MESSAGE, sizeof(char));
     Argument *arg = (Argument *) argument;
     enum pack_type type = GetType(arg->message);
+    printf("[+]Client with id '%d': %s\n", client_list[arg->index].id, arg->message);
     switch (type){
     case LOGIN_PACK:
-        arg->token = GetToken(arg->message, 2);
-        addClient(arg->index, arg->token[1], arg->client);
-        cleanToken(arg->token, 2);
-        sprintf(arg->token[0], "%d", client_list[arg->index].id);
+        token = GetToken(arg->message, 2);
+        addClient(arg->index, token[1], arg->client);
+        cleanToken(token, 2);
+        sprintf(token[0], "%d", client_list[arg->index].id);
         if(arg->index != ERROR_RETURN){
-            buffer = GetMess(arg->token, 1, SUCCEED_PACK);
+            buffer = GetMess(token, 1, SUCCEED_PACK);
         }else{
-            buffer = GetMess(arg->token, 1, ERROR_PACK);
+            buffer = GetMess(token, 1, ERROR_PACK);
         }
-        cleanToken(arg->token, 1);
+        cleanToken(token, 1);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
         pthread_create(&tid_3, NULL, timeoutClient, (void*)arg);
         break;
     case PUBLIC_MESSAGE_PACK:
-        arg->token = GetToken(arg->message, 2);
+        token = GetToken(arg->message, 2);
         tmp = calloc(MAX_MESSAGE, sizeof(char));
         tmp2 = calloc(MAX_MESSAGE, sizeof(char));
         
         strcat(tmp2, "You: ");
-        strcat(tmp2, arg->token[1]);
+        strcat(tmp2, token[1]);
 
         strcat(tmp, client_list[arg->index].name);
         strcat(tmp, ": ");
-        strcat(tmp, arg->token[1]);
-        cleanToken(arg->token, 2);
-        strcpy(arg->token[0], tmp2);
-        buffer = GetMess(arg->token, 1, PUBLIC_MESSAGE_PACK);
+        strcat(tmp, token[1]);
+        cleanToken(token, 2);
+        strcpy(token[0], tmp2);
+        buffer = GetMess(token, 1, PUBLIC_MESSAGE_PACK);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
 
         memset(buffer, 0 ,sizeof(*buffer));
-        cleanToken(arg->token, 1);
+        cleanToken(token, 1);
 
-        strcpy(arg->token[0], tmp);
-        buffer = GetMess(arg->token, 1, PUBLIC_MESSAGE_PACK);
-        cleanToken(arg->token, 1);
+        strcpy(token[0], tmp);
+        buffer = GetMess(token, 1, PUBLIC_MESSAGE_PACK);
+        cleanToken(token, 1);
         for(i = 0; i < client_list[arg->index].room->max_client; i++){
             if(client_list[arg->index].room->player_id[i] > 0){
                 if(client_list[arg->index].room->player_id[i] == client_list[arg->index].id){
@@ -320,17 +588,17 @@ void *clientHandle(void *argument){
         client_list[arg->index].timeout = 0;
         break;
     case HOST_GAME:
-        arg->token = GetToken(arg->message, 3);
-        if(checkRoom(arg->token[1]) != 0){
-            cleanToken(arg->token, 3);
-            strcpy(arg->token[0], "Room name already exists!");
-            buffer = GetMess(arg->token, 1, ERROR_PACK);
-            cleanToken(arg->token, 1);
+        token = GetToken(arg->message, 3);
+        if(checkRoom(token[1]) != 0){
+            cleanToken(token, 3);
+            strcpy(token[0], "Room name already exists!");
+            buffer = GetMess(token, 1, ERROR_PACK);
+            cleanToken(token, 1);
         }else{
             for(i = 0; i < MAX_ROOM; i++){
                 if(strlen(room_list[i].room_id) == 0){
-                    strcpy(room_list[i].room_id, arg->token[1]);
-                    room_list[i].max_client = atoi(arg->token[2]);
+                    strcpy(room_list[i].room_id, token[1]);
+                    room_list[i].max_client = atoi(token[2]);
                     room_list[i].player_id = calloc(room_list[i].max_client, sizeof(int));
                     room_list[i].player_id[room_list[i].client_count] = client_list[arg->index].id;
                     room_list[i].client_count++;
@@ -339,153 +607,122 @@ void *clientHandle(void *argument){
                     break;
                 }
             }
-            cleanToken(arg->token, 3);
+            cleanToken(token, 3);
 
             printf("[+]%s is hosting room '%s' max player is '%d'!\n", client_list[arg->index].name, client_list[arg->index].room->room_id, client_list[arg->index].room->max_client);
-            strcpy(arg->token[0], "OK!");
-            buffer = GetMess(arg->token, 1, SUCCEED_PACK);
-           cleanToken(arg->token, 1);
+            strcpy(token[0], "OK!");
+            buffer = GetMess(token, 1, SUCCEED_PACK);
+            cleanToken(token, 1);
             sendToClient(sockfd, client_list[arg->index].client, buffer);
         }
-        GetRoom(arg->index, arg->token);
+        GetRoom(arg->index);
         break;
     case JOIN_GAME:
-        arg->token = makeCleanToken();
         for(i = 0; i < MAX_ROOM; i++){
             list[i] = -1;
         }
         list = countValidRoom(&validRoom);
-        sprintf(arg->token[0], "%d", validRoom);
-        buffer = GetMess(arg->token, 1, JOIN_GAME);
+        sprintf(token[0], "%d", validRoom);
+        buffer = GetMess(token, 1, JOIN_GAME);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
-        cleanToken(arg->token, 1);
+        cleanToken(token, 1);
 
         j = 0;
         for(i = 0; i < MAX_ROOM; i++){
             if(list[i] > -1){
-                strcpy(arg->token[j++], room_list[list[i]].room_id);
-                sprintf(arg->token[j++], "%d", room_list[list[i]].max_client);
-                sprintf(arg->token[j++], "%d", room_list[list[i]].client_count);
+                strcpy(token[j++], room_list[list[i]].room_id);
+                sprintf(token[j++], "%d", room_list[list[i]].max_client);
+                sprintf(token[j++], "%d", room_list[list[i]].client_count);
             }
         }
-        buffer = GetMess(arg->token, j, HOST_GAME);
-        cleanToken(arg->token, j);
+        buffer = GetMess(token, j, HOST_GAME);
+        cleanToken(token, j);
         sendToClient(sockfd, client_list[arg->index].client, buffer);
         break;
     case JOIN_ROOM:
-        arg->token = GetToken(arg->message, 3);
-        j = checkRoom(arg->token[2]);
+        token = GetToken(arg->message, 3);
+        j = checkRoom(token[2]);
         if(j != -1){
             if(room_list[j].client_count < room_list[j].max_client && room_list[j].isStart != 1){
                 addPlayer(&room_list[j], arg->index);
-                cleanToken(arg->token, 3);
-                strcpy(arg->token[0], "OK!");
-                buffer = GetMess(arg->token, 2, SUCCEED_PACK);
-                cleanToken(arg->token, 2);
+                cleanToken(token, 3);
+                strcpy(token[0], "OK!");
+                buffer = GetMess(token, 2, SUCCEED_PACK);
+                cleanToken(token, 2);
                 sendToClient(sockfd, client_list[arg->index].client, buffer);
                 for(i = 0; i < client_list[arg->index].room->max_client; i++){
                     if(client_list[arg->index].room->player_id[i] != 0){
-                        GetRoom(client_list[arg->index].room->player_id[i] - 1, arg->token);
+                        GetRoom(client_list[arg->index].room->player_id[i] - 1);
                     }
                 }
             }
         }else{
-            cleanToken(arg->token, 3);
-            strcpy(arg->token[0], "Room is already full!");
-            buffer = GetMess(arg->token, 2, ERROR_PACK);
-            cleanToken(arg->token, 2);
+            cleanToken(token, 3);
+            strcpy(token[0], "Room is already full!");
+            buffer = GetMess(token, 2, ERROR_PACK);
+            cleanToken(token, 2);
             sendToClient(sockfd, client_list[arg->index].client, buffer);
         }
         break;
     case START_GAME:
-        arg->token = makeCleanToken();
-        // if(client_list[arg->index].room->client_count == client_list[arg->index].room->max_client){
+        if(client_list[arg->index].room->client_count == client_list[arg->index].room->max_client){
             if(client_list[arg->index].room->max_client == 8){
-                //int arr[] = {PROTECTER, WEREWOLF, WEREWOLF};
+                // int arr[] = {PROTECTER, WEREWOLF, WEREWOLF};
                 // int arr[] = {PROTECTER, PROTECTER, PROTECTER, PROTECTER, PROTECTER, PROTECTER, PROTECTER, PROTECTER};
+                client_list[arg->index].room->w = 2;
+                client_list[arg->index].room->v = 6;
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, PROTECTER, SEER, HUNTER};
                 client_list[arg->index].room->playerRole = arr;
             }else if(client_list[arg->index].room->max_client == 9){
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, PROTECTER, SEER, HUNTER};
+                client_list[arg->index].room->w = 2;
+                client_list[arg->index].room->v = 7;
                 client_list[arg->index].room->playerRole = arr;
             }else if(client_list[arg->index].room->max_client == 10){
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, WEREWOLF, PROTECTER, SEER, HUNTER};
+                client_list[arg->index].room->w = 3;
+                client_list[arg->index].room->v = 7;
                 client_list[arg->index].room->playerRole = arr;
             }else if(client_list[arg->index].room->max_client == 11){
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, WEREWOLF, WITCH, PROTECTER, SEER, HUNTER};
+                client_list[arg->index].room->w = 3;
+                client_list[arg->index].room->v = 8;
                 client_list[arg->index].room->playerRole = arr;
             }else if(client_list[arg->index].room->max_client == 12){
+                client_list[arg->index].room->w = 4;
+                client_list[arg->index].room->v = 8;
                 int arr[] = {VILLAGE, VILLAGE, VILLAGE, VILLAGE, WEREWOLF, WEREWOLF, WEREWOLF, WEREWOLF, WITCH, PROTECTER, SEER, HUNTER};
                 client_list[arg->index].room->playerRole = arr;
             }
-            
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     client_list[client_list[arg->index].room->player_id[i] - 1].role = client_list[arg->index].room->playerRole[i];
-            //     printf("%d->%d\n", client_list[arg->index].room->player_id[i], client_list[arg->index].room->playerRole[i]);
-            // }
-
-            // shuffle(client_list[arg->index].room->playerRole, client_list[arg->index].room->client_count);
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     if(client_list[arg->index].id > 0){
-            //         memset(buffer, 0, sizeof(*buffer));
-            //         sprintf(arg->token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
-            //         buffer = GetMess(arg->token, 1, START_GAME);
-            //         cleanToken(arg->token, 1);
-            //         sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-            //     }
-            // }
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     if(client_list[client_list[arg->index].room->player_id[i] - 1].role == PROTECTER){
-            //         client_list[arg->index].room->currentRole = PROTECTER;
-            //         buffer = GetMess(arg->token, 0, PLAYER_TURN);
-            //         sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-            //         break;
-            //     }
-            // }
-
-
-            // shuffle(client_list[arg->index].room->playerRole, client_list[arg->index].room->max_client);
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     memset(buffer, 0, sizeof(*buffer));
-            //     sprintf(arg->token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
-            //     buffer = GetMess(arg->token, 1, START_GAME);
-            //     cleanToken(arg->token, 1);
-            //     sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-            // }
-            // for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            //     if(client_list[client_list[arg->index].room->player_id[i] - 1].role == PROTECTER){
-            //         buffer = GetMess(arg->token, 0, PLAYER_TURN);
-            //         sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
-            //         break;
-            //     }
-            // }
-            client_list[arg->index].room->isStart = 1;
-            client_list[arg->index].room->isNight = 1;
-        // }
-        break;
-    case PLAYER_TURN:
-        if(client_list[arg->index].room->currentRole == PROTECTER){
-            client_list[arg->index].room->currentRole = WEREWOLF;
-        }
-        else if(client_list[arg->index].room->currentRole == WEREWOLF){
-            client_list[arg->index].room->currentRole = SEER;
-        }else if(client_list[arg->index].room->currentRole == SEER){
-            if(client_list[arg->index].room->max_client >= 11){
-                client_list[arg->index].room->currentRole = WITCH;
-            }else{
-                client_list[arg->index].room->currentRole = HUNTER;
-            }
-        }else if(client_list[arg->index].room->currentRole == HUNTER){
-            client_list[arg->index].room->currentRole = PROTECTER;
-            client_list[arg->index].room->isNight = -1;
-            printf("GoodMoring\n");
-        }
-        for(i = 0; i < client_list[arg->index].room->max_client; i++){
-            if(client_list[client_list[arg->index].room->player_id[i] - 1].role == client_list[arg->index].room->currentRole){
-                client_list[arg->index].room->currentRole = PROTECTER;
-                buffer = GetMess(arg->token, 0, PLAYER_TURN);
+            shuffle(client_list[arg->index].room->playerRole, client_list[arg->index].room->client_count);
+            for(i = 0; i < client_list[arg->index].room->max_client; i++){
+                memset(buffer, 0, sizeof(*buffer));
+                sprintf(token[0], "%d", (int)client_list[arg->index].room->playerRole[i]);
+                client_list[client_list[arg->index].room->player_id[i] - 1].role = client_list[arg->index].room->playerRole[i];
+                buffer = GetMess(token, 1, START_GAME);
+                cleanToken(token, 1);
                 sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
             }
+            for(i = 0; i < client_list[arg->index].room->max_client; i++){
+                if(client_list[client_list[arg->index].room->player_id[i] - 1].role == PROTECTER){
+                    client_list[arg->index].room->currentRole = PROTECTER;
+                    strcpy(token[0], "Night");
+                    buffer = GetMess(token, 1, PLAYER_TURN);
+                    cleanToken(token, 1);
+                    sendToClient(sockfd, client_list[client_list[arg->index].room->player_id[i] - 1].client, buffer);
+                    break;
+                }
+            }
+            client_list[arg->index].room->isStart = 1;
+            client_list[arg->index].room->isNight = 1;
+        }
+        break;
+    case PLAYER_TARGET:
+        token = GetToken(arg->message, 3);
+        if(client_list[arg->index].room->isNight == 1){
+            Night_handle(arg);
+        }else{
+            Day_handle(arg);
         }
         break;
     default:
@@ -550,18 +787,23 @@ int main(){
     int i;
     room_list = calloc(MAX_ROOM, sizeof(Room));
 	client_list = calloc(MAX_CLIENT, sizeof(Client));
+    token = makeCleanToken();
 	for(i = 0; i < MAX_ROOM; i++){
 		room_list[i].room_id = calloc(MAX_NAME, sizeof(char));
 		room_list[i].client_count = 0;
         room_list[i].isStart = -1;
         room_list[i].isNight = -1;
         room_list[i].currentRole = -1;
+        room_list[i].current_wolf = 0;
 	}
 	for(i = 0; i < MAX_CLIENT; i++){
         client_list[i].role = -1;
 		client_list[i].host = -1;
 		client_list[i].id = -1;
 		client_list[i].name = calloc(MAX_NAME, sizeof(char));
+        client_list[i].heal = 1;
+        client_list[i].vote_count = 0;
+        client_list[i].target = -1;
         ZeroMemory(&client_list[i].client, sizeof(client_list[i].client));
 		client_list[i].room = NULL; 
 	}

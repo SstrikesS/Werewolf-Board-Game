@@ -26,3 +26,9 @@
 #define HUNTER 5
 #define VILLAGE 6
 #define SPECTATOR 7
+#define GOOD_MORNING 0
+
+#define WITCH_PROTECT 1
+#define WITCH_POISION -1
+#define DEAD -1
+#define ALIVE 1
