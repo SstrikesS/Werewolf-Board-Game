@@ -15,7 +15,8 @@ enum pack_type{
     ROOM_INFO = 12,
     START_GAME = 13,
     PLAYER_TURN = 14,
-    ROLE = 15
+    ROLE = 15,
+    GAME_RESULT = 16
 };
 
 
